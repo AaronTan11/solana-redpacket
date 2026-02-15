@@ -1,4 +1,3 @@
-use pinocchio::ProgramResult;
 use pinocchio::error::ProgramError;
 
 #[repr(u32)]
@@ -31,8 +30,4 @@ impl From<RedPacketError> for ProgramError {
     fn from(e: RedPacketError) -> Self {
         ProgramError::Custom(e as u32)
     }
-}
-
-pub fn err(e: RedPacketError) -> ProgramResult {
-    Err(e.into())
 }

@@ -1,12 +1,11 @@
 use pinocchio::{
     cpi::{Seed, Signer},
     error::ProgramError,
-    sysvars::{rent::Rent, Sysvar},
     AccountView, Address, ProgramResult,
 };
 use pinocchio_token::instructions::Transfer;
 use crate::log;
-use crate::constants::{ADMIN, ID, TOKEN_PROGRAM_ID, TREASURY_SEED, TREASURY_SIZE, TREASURY_VAULT_SEED, TOKEN_TYPE_SOL};
+use crate::constants::{ADMIN, ID, NATIVE_SOL_MINT, TOKEN_PROGRAM_ID, TREASURY_SEED, TREASURY_SIZE, TREASURY_VAULT_SEED, TOKEN_TYPE_SOL, rent_exempt};
 use crate::error::RedPacketError;
 use crate::state;
 
@@ -47,9 +46,23 @@ pub fn process_withdraw_fees(accounts: &[AccountView], data: &[u8]) -> ProgramRe
         // Validate treasury
         state::validate_treasury(treasury, &ID)?;
 
+        // Verify treasury PDA (includes NATIVE_SOL_MINT in seeds)
+        {
+            let tdata = treasury.try_borrow()?;
+            let t_bump = state::get_treasury_bump(&tdata);
+            let t_bump_bytes = [t_bump];
+            let expected_treasury = Address::create_program_address(
+                &[TREASURY_SEED, &NATIVE_SOL_MINT, &t_bump_bytes],
+                &ID,
+            )
+            .map_err(|_| ProgramError::from(RedPacketError::InvalidPDA))?;
+            if treasury.address() != &expected_treasury {
+                return Err(RedPacketError::InvalidPDA.into());
+            }
+        }
+
         // Read sol_fees_collected and compute withdrawal
-        let rent = Rent::get()?;
-        let treasury_rent = rent.try_minimum_balance(TREASURY_SIZE)?;
+        let treasury_rent = rent_exempt(TREASURY_SIZE);
 
         let (sol_fees, withdraw_amount) = {
             let tdata = treasury.try_borrow()?;
@@ -108,16 +121,31 @@ pub fn process_withdraw_fees(accounts: &[AccountView], data: &[u8]) -> ProgramRe
         // Validate treasury
         state::validate_treasury(treasury, &ID)?;
 
-        // Read treasury data for PDA signing and vault verification
-        let treasury_bump = {
+        // Read treasury data for PDA verification and vault verification
+        let (treasury_bump, mint_bytes) = {
             let tdata = treasury.try_borrow()?;
             let bump = state::get_treasury_bump(&tdata);
 
-            // Verify treasury_vault PDA
+            // Copy mint bytes for PDA verification
+            let mut mint = [0u8; 32];
+            mint.copy_from_slice(state::get_treasury_mint(&tdata));
+
+            // Verify treasury PDA (includes mint in seeds)
+            let bump_bytes = [bump];
+            let expected_treasury = Address::create_program_address(
+                &[TREASURY_SEED, &mint, &bump_bytes],
+                &ID,
+            )
+            .map_err(|_| ProgramError::from(RedPacketError::InvalidPDA))?;
+            if treasury.address() != &expected_treasury {
+                return Err(RedPacketError::InvalidPDA.into());
+            }
+
+            // Verify treasury_vault PDA (includes mint in seeds)
             let tv_bump = state::get_treasury_vault_bump(&tdata);
             let tv_bump_bytes = [tv_bump];
             let expected_tv = Address::create_program_address(
-                &[TREASURY_VAULT_SEED, &tv_bump_bytes],
+                &[TREASURY_VAULT_SEED, &mint, &tv_bump_bytes],
                 &ID,
             )
             .map_err(|_| ProgramError::from(RedPacketError::InvalidPDA))?;
@@ -125,7 +153,7 @@ pub fn process_withdraw_fees(accounts: &[AccountView], data: &[u8]) -> ProgramRe
                 return Err(RedPacketError::InvalidPDA.into());
             }
 
-            bump
+            (bump, mint)
         };
 
         // Read vault balance from token account data (offset 64 = amount field)
@@ -147,10 +175,11 @@ pub fn process_withdraw_fees(accounts: &[AccountView], data: &[u8]) -> ProgramRe
             return Err(RedPacketError::InsufficientTreasuryBalance.into());
         }
 
-        // Transfer from treasury_vault to admin_token_account
+        // Transfer from treasury_vault to admin_token_account (treasury PDA signs with mint in seeds)
         let bump_bytes = [treasury_bump];
         let seeds = [
             Seed::from(TREASURY_SEED),
+            Seed::from(mint_bytes.as_ref()),
             Seed::from(bump_bytes.as_ref()),
         ];
         let signer = [Signer::from(&seeds)];

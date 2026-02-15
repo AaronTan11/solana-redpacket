@@ -1,16 +1,17 @@
 use pinocchio::{
     cpi::{Seed, Signer},
     error::ProgramError,
-    sysvars::{clock::Clock, rent::Rent, Sysvar},
+    sysvars::{clock::Clock, Sysvar},
     AccountView, Address, ProgramResult,
 };
 use pinocchio_system::instructions::CreateAccount;
 use pinocchio_token::instructions::{InitializeAccount3, Transfer};
 use crate::log;
 use crate::constants::{
-    FEE_DENOMINATOR, FEE_RATE_BPS, ID, MAX_RECIPIENTS, SEED_PREFIX, SPLIT_EVEN, SPLIT_RANDOM,
-    SYSTEM_PROGRAM_ID, TOKEN_ACCOUNT_SIZE, TOKEN_PROGRAM_ID, TOKEN_TYPE_SOL, TOKEN_TYPE_SPL,
-    TREASURY_VAULT_SEED, VAULT_SEED, redpacket_size,
+    FEE_DENOMINATOR, FEE_RATE_BPS, ID, MAX_RECIPIENTS, NATIVE_SOL_MINT, SEED_PREFIX,
+    SPLIT_EVEN, SPLIT_RANDOM, SYSTEM_PROGRAM_ID, TOKEN_ACCOUNT_SIZE, TOKEN_PROGRAM_ID,
+    TOKEN_TYPE_SOL, TOKEN_TYPE_SPL, TREASURY_SEED, TREASURY_VAULT_SEED, VAULT_SEED,
+    redpacket_size, rent_exempt,
 };
 use crate::error::RedPacketError;
 use crate::state;
@@ -183,16 +184,30 @@ fn process_create_spl(
     // Validate treasury
     state::validate_treasury(treasury, &ID)?;
 
-    // Verify mint matches treasury's accepted mint and verify treasury_vault PDA
+    // Verify mint matches treasury, verify treasury PDA, and verify treasury_vault PDA
     {
         let tdata = treasury.try_borrow()?;
         if mint.address().as_ref() != state::get_treasury_mint(&tdata) {
             return Err(RedPacketError::InvalidMint.into());
         }
+
+        // Verify treasury PDA (includes mint in seeds)
+        let t_bump = state::get_treasury_bump(&tdata);
+        let t_bump_bytes = [t_bump];
+        let expected_treasury = Address::create_program_address(
+            &[TREASURY_SEED, mint.address().as_ref(), &t_bump_bytes],
+            &ID,
+        )
+        .map_err(|_| ProgramError::from(RedPacketError::InvalidPDA))?;
+        if treasury.address() != &expected_treasury {
+            return Err(RedPacketError::InvalidPDA.into());
+        }
+
+        // Verify treasury_vault PDA (includes mint in seeds)
         let tv_bump = state::get_treasury_vault_bump(&tdata);
         let tv_bump_bytes = [tv_bump];
         let expected_tv = Address::create_program_address(
-            &[TREASURY_VAULT_SEED, &tv_bump_bytes],
+            &[TREASURY_VAULT_SEED, mint.address().as_ref(), &tv_bump_bytes],
             &ID,
         )
         .map_err(|_| ProgramError::from(RedPacketError::InvalidPDA))?;
@@ -203,8 +218,7 @@ fn process_create_spl(
 
     // Create red_packet PDA
     let account_size = redpacket_size(num_recipients);
-    let rent = Rent::get()?;
-    let rp_rent = rent.try_minimum_balance(account_size)?;
+    let rp_rent = rent_exempt(account_size);
 
     let rp_seeds = [
         Seed::from(SEED_PREFIX),
@@ -224,7 +238,7 @@ fn process_create_spl(
     .invoke_signed(&rp_signer)?;
 
     // Create vault token account
-    let vault_rent = rent.try_minimum_balance(TOKEN_ACCOUNT_SIZE)?;
+    let vault_rent = rent_exempt(TOKEN_ACCOUNT_SIZE);
 
     let vault_seeds = [
         Seed::from(VAULT_SEED),
@@ -342,13 +356,25 @@ fn process_create_sol(
         return Err(RedPacketError::InvalidPDA.into());
     }
 
-    // Validate treasury
+    // Validate treasury and verify treasury PDA (includes NATIVE_SOL_MINT in seeds)
     state::validate_treasury(treasury, &ID)?;
+    {
+        let tdata = treasury.try_borrow()?;
+        let t_bump = state::get_treasury_bump(&tdata);
+        let t_bump_bytes = [t_bump];
+        let expected_treasury = Address::create_program_address(
+            &[TREASURY_SEED, &NATIVE_SOL_MINT, &t_bump_bytes],
+            &ID,
+        )
+        .map_err(|_| ProgramError::from(RedPacketError::InvalidPDA))?;
+        if treasury.address() != &expected_treasury {
+            return Err(RedPacketError::InvalidPDA.into());
+        }
+    }
 
     // Create red_packet PDA
     let account_size = redpacket_size(num_recipients);
-    let rent = Rent::get()?;
-    let rp_rent = rent.try_minimum_balance(account_size)?;
+    let rp_rent = rent_exempt(account_size);
 
     let rp_seeds = [
         Seed::from(SEED_PREFIX),
@@ -368,7 +394,7 @@ fn process_create_sol(
     .invoke_signed(&rp_signer)?;
 
     // Create vault PDA (0-byte account, holds SOL as lamports)
-    let vault_rent = rent.try_minimum_balance(0)?;
+    let vault_rent = rent_exempt(0);
     let vault_lamports = vault_rent
         .checked_add(total_amount)
         .ok_or(ProgramError::ArithmeticOverflow)?;

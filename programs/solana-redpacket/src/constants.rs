@@ -44,6 +44,17 @@ pub const ADMIN: Address = Address::new_from_array(five8_const::decode_32_const(
     "ADMNqGCquVC3xPkhttaUSCMFhSmu3rBVsRRBKjLFMbhg",
 ));
 
+/// Sentinel "mint" for native SOL treasury PDA derivation (not a real mint)
+pub const NATIVE_SOL_MINT: [u8; 32] = [0xFF; 32];
+
+/// Rent-exempt minimum: (data_len + 128) * 3480 * 2
+/// Based on DEFAULT_LAMPORTS_PER_BYTE_YEAR = 3480, exemption_threshold = 2.0
+/// These values have been stable since Solana genesis.
+#[inline(always)]
+pub const fn rent_exempt(data_len: usize) -> u64 {
+    ((data_len as u64) + 128) * 2 * 3480
+}
+
 /// Well-known program IDs
 pub const SYSTEM_PROGRAM_ID: Address = Address::new_from_array([0; 32]);
 pub const TOKEN_PROGRAM_ID: Address = Address::new_from_array(five8_const::decode_32_const(

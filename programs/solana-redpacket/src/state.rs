@@ -36,24 +36,29 @@ const TOKEN_TYPE_OFFSET: usize = 62;
 const EXPIRES_AT_OFFSET: usize = 63;
 const AMOUNTS_OFFSET: usize = 71;
 
+#[inline]
 fn read_u64(data: &[u8], offset: usize) -> u64 {
     let bytes: [u8; 8] = data[offset..offset + 8].try_into().unwrap();
     u64::from_le_bytes(bytes)
 }
 
+#[inline]
 fn read_i64(data: &[u8], offset: usize) -> i64 {
     let bytes: [u8; 8] = data[offset..offset + 8].try_into().unwrap();
     i64::from_le_bytes(bytes)
 }
 
+#[inline]
 fn write_u64(data: &mut [u8], offset: usize, value: u64) {
     data[offset..offset + 8].copy_from_slice(&value.to_le_bytes());
 }
 
+#[inline]
 fn write_i64(data: &mut [u8], offset: usize, value: i64) {
     data[offset..offset + 8].copy_from_slice(&value.to_le_bytes());
 }
 
+#[inline]
 fn claimers_offset(num_recipients: u8) -> usize {
     AMOUNTS_OFFSET + 8 * num_recipients as usize
 }
@@ -75,55 +80,58 @@ pub fn validate_redpacket(account: &AccountView, program_id: &Address) -> Result
 
 // === RedPacket Readers ===
 
+#[inline]
 pub fn get_creator(data: &[u8]) -> &[u8] {
     &data[CREATOR_OFFSET..CREATOR_OFFSET + 32]
 }
 
+#[inline]
 pub fn get_id(data: &[u8]) -> u64 {
     read_u64(data, ID_OFFSET)
 }
 
-pub fn get_total_amount(data: &[u8]) -> u64 {
-    read_u64(data, TOTAL_AMOUNT_OFFSET)
-}
-
+#[inline]
 pub fn get_remaining_amount(data: &[u8]) -> u64 {
     read_u64(data, REMAINING_AMOUNT_OFFSET)
 }
 
+#[inline]
 pub fn get_num_recipients(data: &[u8]) -> u8 {
     data[NUM_RECIPIENTS_OFFSET]
 }
 
+#[inline]
 pub fn get_num_claimed(data: &[u8]) -> u8 {
     data[NUM_CLAIMED_OFFSET]
 }
 
-pub fn get_split_mode(data: &[u8]) -> u8 {
-    data[SPLIT_MODE_OFFSET]
-}
-
+#[inline]
 pub fn get_bump(data: &[u8]) -> u8 {
     data[BUMP_OFFSET]
 }
 
+#[inline]
 pub fn get_vault_bump(data: &[u8]) -> u8 {
     data[VAULT_BUMP_OFFSET]
 }
 
+#[inline]
 pub fn get_token_type(data: &[u8]) -> u8 {
     data[TOKEN_TYPE_OFFSET]
 }
 
+#[inline]
 pub fn get_expires_at(data: &[u8]) -> i64 {
     read_i64(data, EXPIRES_AT_OFFSET)
 }
 
+#[inline]
 pub fn get_amount_at(data: &[u8], index: u8) -> u64 {
     let offset = AMOUNTS_OFFSET + 8 * index as usize;
     read_u64(data, offset)
 }
 
+#[inline]
 pub fn get_claimer_at(data: &[u8], num_recipients: u8, index: u8) -> &[u8] {
     let base = claimers_offset(num_recipients);
     let offset = base + 32 * index as usize;
@@ -164,14 +172,17 @@ pub fn init_redpacket(
     }
 }
 
+#[inline]
 pub fn set_remaining_amount(data: &mut [u8], amount: u64) {
     write_u64(data, REMAINING_AMOUNT_OFFSET, amount);
 }
 
+#[inline]
 pub fn set_num_claimed(data: &mut [u8], count: u8) {
     data[NUM_CLAIMED_OFFSET] = count;
 }
 
+#[inline]
 pub fn set_claimer_at(data: &mut [u8], num_recipients: u8, index: u8, claimer: &[u8]) {
     let base = claimers_offset(num_recipients);
     let offset = base + 32 * index as usize;
@@ -223,26 +234,32 @@ pub fn init_treasury(data: &mut [u8], bump: u8, vault_bump: u8, mint: &[u8]) {
     data[TREASURY_MINT_OFFSET..TREASURY_MINT_OFFSET + 32].copy_from_slice(mint);
 }
 
+#[inline]
 pub fn get_treasury_bump(data: &[u8]) -> u8 {
     data[TREASURY_BUMP_OFFSET]
 }
 
+#[inline]
 pub fn get_treasury_vault_bump(data: &[u8]) -> u8 {
     data[TREASURY_VAULT_BUMP_OFFSET]
 }
 
+#[inline]
 pub fn get_treasury_mint(data: &[u8]) -> &[u8] {
     &data[TREASURY_MINT_OFFSET..TREASURY_MINT_OFFSET + 32]
 }
 
+#[inline]
 pub fn get_sol_fees_collected(data: &[u8]) -> u64 {
     read_u64(data, SOL_FEES_OFFSET)
 }
 
+#[inline]
 pub fn set_sol_fees_collected(data: &mut [u8], amount: u64) {
     write_u64(data, SOL_FEES_OFFSET, amount);
 }
 
+#[inline]
 pub fn validate_token_type(token_type: u8) -> Result<(), ProgramError> {
     if token_type != TOKEN_TYPE_SPL && token_type != TOKEN_TYPE_SOL {
         return Err(RedPacketError::InvalidTokenType.into());

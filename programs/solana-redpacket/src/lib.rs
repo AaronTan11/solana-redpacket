@@ -34,15 +34,15 @@ pub fn process_instruction(
 }
 
 // Raw sol_log syscall — replaces solana-program-log dependency
-#[cfg(target_os = "solana")]
+#[cfg(all(feature = "logging", target_os = "solana"))]
 extern "C" {
     fn sol_log_(message: *const u8, len: u64);
 }
 
 #[inline(always)]
-pub fn log(msg: &str) {
-    #[cfg(target_os = "solana")]
+pub fn log(_msg: &str) {
+    #[cfg(all(feature = "logging", target_os = "solana"))]
     unsafe {
-        sol_log_(msg.as_ptr(), msg.len() as u64);
+        sol_log_(_msg.as_ptr(), _msg.len() as u64);
     }
 }

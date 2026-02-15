@@ -69,28 +69,32 @@ function findVaultPDA(
   );
 }
 
-function findTreasuryPDA(): [PublicKey, number] {
+const NATIVE_SOL_MINT = new PublicKey(Buffer.alloc(32, 0xFF));
+
+function findTreasuryPDA(mint: PublicKey): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(
-    [TREASURY_SEED],
+    [TREASURY_SEED, mint.toBuffer()],
     PROGRAM_ID
   );
 }
 
-function findTreasuryVaultPDA(): [PublicKey, number] {
+function findTreasuryVaultPDA(mint: PublicKey): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(
-    [TREASURY_VAULT_SEED],
+    [TREASURY_VAULT_SEED, mint.toBuffer()],
     PROGRAM_ID
   );
 }
 
 function buildInitTreasuryData(
+  tokenType: number,
   treasuryBump: number,
   vaultBump: number
 ): Buffer {
-  const buf = Buffer.alloc(3);
+  const buf = Buffer.alloc(4);
   buf.writeUInt8(3, 0); // discriminator
-  buf.writeUInt8(treasuryBump, 1);
-  buf.writeUInt8(vaultBump, 2);
+  buf.writeUInt8(tokenType, 1); // token_type
+  buf.writeUInt8(treasuryBump, 2);
+  buf.writeUInt8(vaultBump, 3);
   return buf;
 }
 
@@ -151,8 +155,8 @@ function readTokenBalance(accountData: Buffer): bigint {
 }
 
 /**
- * Set up a fresh LiteSVM with our program, create a mock USDC mint,
- * and initialize the treasury.
+ * Set up a fresh LiteSVM with our program, create mock USDC + MYRC mints,
+ * and initialize 3 treasuries (USDC, MYRC, SOL).
  */
 function setupSVM(): {
   svm: LiteSVM;
@@ -162,13 +166,20 @@ function setupSVM(): {
   treasuryBump: number;
   treasuryVaultPDA: PublicKey;
   treasuryVaultBump: number;
+  myrcMint: Keypair;
+  myrcTreasuryPDA: PublicKey;
+  myrcTreasuryBump: number;
+  myrcTreasuryVaultPDA: PublicKey;
+  myrcTreasuryVaultBump: number;
+  solTreasuryPDA: PublicKey;
+  solTreasuryBump: number;
 } {
   const svm = new LiteSVM();
   svm.addProgramFromFile(PROGRAM_ID, PROGRAM_SO);
 
   // Create mint authority
   const mintAuthority = Keypair.generate();
-  svm.airdrop(mintAuthority.publicKey, BigInt(10 * LAMPORTS_PER_SOL));
+  svm.airdrop(mintAuthority.publicKey, BigInt(20 * LAMPORTS_PER_SOL));
 
   // Create mock USDC mint (6 decimals)
   const mint = Keypair.generate();
@@ -193,9 +204,32 @@ function setupSVM(): {
   tx.sign(mintAuthority, mint);
   svm.sendTransaction(tx);
 
-  // Initialize treasury
-  const [treasuryPDA, treasuryBump] = findTreasuryPDA();
-  const [treasuryVaultPDA, treasuryVaultBump] = findTreasuryVaultPDA();
+  // Create mock MYRC mint (9 decimals)
+  const myrcMint = Keypair.generate();
+  blockhash = svm.latestBlockhash();
+  tx = new Transaction();
+  tx.recentBlockhash = blockhash;
+  tx.add(
+    SystemProgram.createAccount({
+      fromPubkey: mintAuthority.publicKey,
+      newAccountPubkey: myrcMint.publicKey,
+      space: MINT_SIZE,
+      lamports: Number(MINT_RENT),
+      programId: TOKEN_PROGRAM_ID,
+    }),
+    createInitializeMintInstruction(
+      myrcMint.publicKey,
+      9, // decimals (MYRC = 9)
+      mintAuthority.publicKey,
+      null
+    )
+  );
+  tx.sign(mintAuthority, myrcMint);
+  svm.sendTransaction(tx);
+
+  // Initialize USDC treasury
+  const [treasuryPDA, treasuryBump] = findTreasuryPDA(mint.publicKey);
+  const [treasuryVaultPDA, treasuryVaultBump] = findTreasuryVaultPDA(mint.publicKey);
 
   blockhash = svm.latestBlockhash();
   tx = new Transaction();
@@ -211,13 +245,62 @@ function setupSVM(): {
         { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
       ],
-      data: buildInitTreasuryData(treasuryBump, treasuryVaultBump),
+      data: buildInitTreasuryData(0, treasuryBump, treasuryVaultBump),
     })
   );
   tx.sign(mintAuthority);
   svm.sendTransaction(tx);
 
-  return { svm, mintAuthority, mint, treasuryPDA, treasuryBump, treasuryVaultPDA, treasuryVaultBump };
+  // Initialize MYRC treasury
+  const [myrcTreasuryPDA, myrcTreasuryBump] = findTreasuryPDA(myrcMint.publicKey);
+  const [myrcTreasuryVaultPDA, myrcTreasuryVaultBump] = findTreasuryVaultPDA(myrcMint.publicKey);
+
+  blockhash = svm.latestBlockhash();
+  tx = new Transaction();
+  tx.recentBlockhash = blockhash;
+  tx.add(
+    new TransactionInstruction({
+      programId: PROGRAM_ID,
+      keys: [
+        { pubkey: mintAuthority.publicKey, isSigner: true, isWritable: true },
+        { pubkey: myrcTreasuryPDA, isSigner: false, isWritable: true },
+        { pubkey: myrcTreasuryVaultPDA, isSigner: false, isWritable: true },
+        { pubkey: myrcMint.publicKey, isSigner: false, isWritable: false },
+        { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+        { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+      ],
+      data: buildInitTreasuryData(0, myrcTreasuryBump, myrcTreasuryVaultBump),
+    })
+  );
+  tx.sign(mintAuthority);
+  svm.sendTransaction(tx);
+
+  // Initialize SOL treasury
+  const [solTreasuryPDA, solTreasuryBump] = findTreasuryPDA(NATIVE_SOL_MINT);
+
+  blockhash = svm.latestBlockhash();
+  tx = new Transaction();
+  tx.recentBlockhash = blockhash;
+  tx.add(
+    new TransactionInstruction({
+      programId: PROGRAM_ID,
+      keys: [
+        { pubkey: mintAuthority.publicKey, isSigner: true, isWritable: true },
+        { pubkey: solTreasuryPDA, isSigner: false, isWritable: true },
+        { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+      ],
+      data: buildInitTreasuryData(1, solTreasuryBump, 0),
+    })
+  );
+  tx.sign(mintAuthority);
+  svm.sendTransaction(tx);
+
+  return {
+    svm, mintAuthority,
+    mint, treasuryPDA, treasuryBump, treasuryVaultPDA, treasuryVaultBump,
+    myrcMint, myrcTreasuryPDA, myrcTreasuryBump, myrcTreasuryVaultPDA, myrcTreasuryVaultBump,
+    solTreasuryPDA, solTreasuryBump,
+  };
 }
 
 /**
@@ -1270,9 +1353,7 @@ describe("solana-redpacket (USDC)", () => {
   });
 
   it("Rejects treasury double initialization", () => {
-    const { svm, mintAuthority, mint } = setupSVM();
-    const [treasuryPDA, treasuryBump] = findTreasuryPDA();
-    const [treasuryVaultPDA, treasuryVaultBump] = findTreasuryVaultPDA();
+    const { svm, mintAuthority, mint, treasuryPDA, treasuryBump, treasuryVaultPDA, treasuryVaultBump } = setupSVM();
 
     // Try to initialize treasury again — should fail
     const blockhash = svm.latestBlockhash();
@@ -1289,7 +1370,7 @@ describe("solana-redpacket (USDC)", () => {
           { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
           { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
         ],
-        data: buildInitTreasuryData(treasuryBump, treasuryVaultBump),
+        data: buildInitTreasuryData(0, treasuryBump, treasuryVaultBump),
       })
     );
     tx.sign(mintAuthority);
@@ -1707,7 +1788,7 @@ describe("solana-redpacket (USDC)", () => {
   // ============================
 
   it("Creates SOL red packet with even split", () => {
-    const { svm, treasuryPDA } = setupSVM();
+    const { svm, solTreasuryPDA: treasuryPDA } = setupSVM();
 
     const creator = Keypair.generate();
     svm.airdrop(creator.publicKey, BigInt(10 * LAMPORTS_PER_SOL));
@@ -1766,7 +1847,7 @@ describe("solana-redpacket (USDC)", () => {
   });
 
   it("Claims from SOL red packet", () => {
-    const { svm, treasuryPDA } = setupSVM();
+    const { svm, solTreasuryPDA: treasuryPDA } = setupSVM();
 
     const creator = Keypair.generate();
     svm.airdrop(creator.publicKey, BigInt(10 * LAMPORTS_PER_SOL));
@@ -1834,7 +1915,7 @@ describe("solana-redpacket (USDC)", () => {
   });
 
   it("Closes fully-claimed SOL red packet", () => {
-    const { svm, treasuryPDA } = setupSVM();
+    const { svm, solTreasuryPDA: treasuryPDA } = setupSVM();
 
     const creator = Keypair.generate();
     svm.airdrop(creator.publicKey, BigInt(10 * LAMPORTS_PER_SOL));
@@ -1918,7 +1999,7 @@ describe("solana-redpacket (USDC)", () => {
   });
 
   it("Closes expired SOL red packet with partial claims", () => {
-    const { svm, treasuryPDA } = setupSVM();
+    const { svm, solTreasuryPDA: treasuryPDA } = setupSVM();
 
     const creator = Keypair.generate();
     svm.airdrop(creator.publicKey, BigInt(10 * LAMPORTS_PER_SOL));
@@ -2006,7 +2087,7 @@ describe("solana-redpacket (USDC)", () => {
   });
 
   it("Rejects double claim on SOL red packet", () => {
-    const { svm, treasuryPDA } = setupSVM();
+    const { svm, solTreasuryPDA: treasuryPDA } = setupSVM();
 
     const creator = Keypair.generate();
     svm.airdrop(creator.publicKey, BigInt(10 * LAMPORTS_PER_SOL));
@@ -2084,7 +2165,7 @@ describe("solana-redpacket (USDC)", () => {
   });
 
   it("Creates and claims SOL random split", () => {
-    const { svm, treasuryPDA } = setupSVM();
+    const { svm, solTreasuryPDA: treasuryPDA } = setupSVM();
 
     const creator = Keypair.generate();
     svm.airdrop(creator.publicKey, BigInt(10 * LAMPORTS_PER_SOL));
@@ -2151,7 +2232,7 @@ describe("solana-redpacket (USDC)", () => {
   });
 
   it("Verifies SOL fees tracked in treasury", () => {
-    const { svm, treasuryPDA } = setupSVM();
+    const { svm, solTreasuryPDA: treasuryPDA } = setupSVM();
 
     const creator = Keypair.generate();
     svm.airdrop(creator.publicKey, BigInt(10 * LAMPORTS_PER_SOL));
@@ -2191,6 +2272,283 @@ describe("solana-redpacket (USDC)", () => {
     expect(solFees).to.equal(expectedFee * 2n);
 
     console.log(`    SOL fees tracked: ${solFees} lamports from 2 red packets`);
+  });
+
+  // ============================
+  // MYRC Red Packet Tests
+  // ============================
+
+  it("Creates MYRC red packet and collects fee in MYRC treasury", () => {
+    const { svm, mintAuthority, myrcMint, myrcTreasuryPDA, myrcTreasuryVaultPDA } = setupSVM();
+
+    const creator = Keypair.generate();
+    svm.airdrop(creator.publicKey, BigInt(10 * LAMPORTS_PER_SOL));
+
+    const totalAmount = 5_000_000_000n; // 5 MYRC (9 decimals)
+    const fee = totalAmount * 10n / 10_000n; // 0.1%
+    const creatorTA = createAndFundTokenAccount(
+      svm, creator, myrcMint.publicKey, mintAuthority, creator.publicKey,
+      totalAmount + fee + 1_000_000_000n
+    );
+
+    const id = 400n;
+    const numRecipients = 2;
+    const [redPacketPDA, rpBump] = findRedPacketPDA(creator.publicKey, id);
+    const [vaultPDA, vaultBump] = findVaultPDA(creator.publicKey, id);
+    const expiresAt = BigInt(Math.floor(Date.now() / 1000) + 3600);
+
+    const blockhash = svm.latestBlockhash();
+    const tx = new Transaction();
+    tx.recentBlockhash = blockhash;
+    tx.add(
+      new TransactionInstruction({
+        programId: PROGRAM_ID,
+        keys: [
+          { pubkey: creator.publicKey, isSigner: true, isWritable: true },
+          { pubkey: creatorTA.publicKey, isSigner: false, isWritable: true },
+          { pubkey: redPacketPDA, isSigner: false, isWritable: true },
+          { pubkey: vaultPDA, isSigner: false, isWritable: true },
+          { pubkey: myrcTreasuryPDA, isSigner: false, isWritable: false },
+          { pubkey: myrcTreasuryVaultPDA, isSigner: false, isWritable: true },
+          { pubkey: myrcMint.publicKey, isSigner: false, isWritable: false },
+          { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+          { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+        ],
+        data: buildCreateData(id, totalAmount, numRecipients, 0, expiresAt, rpBump, vaultBump),
+      })
+    );
+    tx.sign(creator);
+    svm.sendTransaction(tx);
+
+    // Verify vault has MYRC
+    const vaultAccount = svm.getAccount(vaultPDA);
+    const vaultBalance = readTokenBalance(Buffer.from(vaultAccount!.data));
+    expect(vaultBalance).to.equal(totalAmount);
+
+    // Verify MYRC treasury vault received fee
+    const tvAccount = svm.getAccount(myrcTreasuryVaultPDA);
+    const tvBalance = readTokenBalance(Buffer.from(tvAccount!.data));
+    expect(tvBalance).to.equal(fee);
+
+    console.log(`    MYRC red packet created: ${Number(totalAmount) / 1e9} MYRC, fee: ${Number(fee) / 1e9} MYRC`);
+  });
+
+  it("Claims from MYRC red packet", () => {
+    const { svm, mintAuthority, myrcMint, myrcTreasuryPDA, myrcTreasuryVaultPDA } = setupSVM();
+
+    const creator = Keypair.generate();
+    svm.airdrop(creator.publicKey, BigInt(10 * LAMPORTS_PER_SOL));
+
+    const totalAmount = 2_000_000_000n; // 2 MYRC, divisible by 2
+    const fee = totalAmount * 10n / 10_000n;
+    const creatorTA = createAndFundTokenAccount(
+      svm, creator, myrcMint.publicKey, mintAuthority, creator.publicKey,
+      totalAmount + fee
+    );
+
+    const id = 401n;
+    const numRecipients = 2;
+    const [redPacketPDA, rpBump] = findRedPacketPDA(creator.publicKey, id);
+    const [vaultPDA, vaultBump] = findVaultPDA(creator.publicKey, id);
+    const expiresAt = BigInt(Math.floor(Date.now() / 1000) + 3600);
+
+    // Create
+    let blockhash = svm.latestBlockhash();
+    let tx = new Transaction();
+    tx.recentBlockhash = blockhash;
+    tx.add(
+      new TransactionInstruction({
+        programId: PROGRAM_ID,
+        keys: [
+          { pubkey: creator.publicKey, isSigner: true, isWritable: true },
+          { pubkey: creatorTA.publicKey, isSigner: false, isWritable: true },
+          { pubkey: redPacketPDA, isSigner: false, isWritable: true },
+          { pubkey: vaultPDA, isSigner: false, isWritable: true },
+          { pubkey: myrcTreasuryPDA, isSigner: false, isWritable: false },
+          { pubkey: myrcTreasuryVaultPDA, isSigner: false, isWritable: true },
+          { pubkey: myrcMint.publicKey, isSigner: false, isWritable: false },
+          { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+          { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+        ],
+        data: buildCreateData(id, totalAmount, numRecipients, 0, expiresAt, rpBump, vaultBump),
+      })
+    );
+    tx.sign(creator);
+    svm.sendTransaction(tx);
+
+    // Claim
+    const claimer = Keypair.generate();
+    svm.airdrop(claimer.publicKey, BigInt(LAMPORTS_PER_SOL));
+    const claimerTA = createAndFundTokenAccount(
+      svm, claimer, myrcMint.publicKey, mintAuthority, claimer.publicKey, 0n
+    );
+
+    blockhash = svm.latestBlockhash();
+    tx = new Transaction();
+    tx.recentBlockhash = blockhash;
+    tx.add(
+      new TransactionInstruction({
+        programId: PROGRAM_ID,
+        keys: [
+          { pubkey: claimer.publicKey, isSigner: true, isWritable: true },
+          { pubkey: claimerTA.publicKey, isSigner: false, isWritable: true },
+          { pubkey: redPacketPDA, isSigner: false, isWritable: true },
+          { pubkey: vaultPDA, isSigner: false, isWritable: true },
+          { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+        ],
+        data: buildClaimData(),
+      })
+    );
+    tx.sign(claimer);
+    svm.sendTransaction(tx);
+
+    const claimerBalance = readTokenBalance(Buffer.from(svm.getAccount(claimerTA.publicKey)!.data));
+    expect(claimerBalance).to.equal(1_000_000_000n); // 1 MYRC (2 / 2)
+
+    console.log(`    MYRC claim: received ${Number(claimerBalance) / 1e9} MYRC`);
+  });
+
+  it("Closes MYRC red packet after full claim", () => {
+    const { svm, mintAuthority, myrcMint, myrcTreasuryPDA, myrcTreasuryVaultPDA } = setupSVM();
+
+    const creator = Keypair.generate();
+    svm.airdrop(creator.publicKey, BigInt(10 * LAMPORTS_PER_SOL));
+
+    const totalAmount = 1_000_000_000n; // 1 MYRC
+    const fee = totalAmount * 10n / 10_000n;
+    const creatorTA = createAndFundTokenAccount(
+      svm, creator, myrcMint.publicKey, mintAuthority, creator.publicKey,
+      totalAmount + fee
+    );
+
+    const id = 402n;
+    const [redPacketPDA, rpBump] = findRedPacketPDA(creator.publicKey, id);
+    const [vaultPDA, vaultBump] = findVaultPDA(creator.publicKey, id);
+    const expiresAt = BigInt(Math.floor(Date.now() / 1000) + 3600);
+
+    // Create (1 recipient)
+    let blockhash = svm.latestBlockhash();
+    let tx = new Transaction();
+    tx.recentBlockhash = blockhash;
+    tx.add(
+      new TransactionInstruction({
+        programId: PROGRAM_ID,
+        keys: [
+          { pubkey: creator.publicKey, isSigner: true, isWritable: true },
+          { pubkey: creatorTA.publicKey, isSigner: false, isWritable: true },
+          { pubkey: redPacketPDA, isSigner: false, isWritable: true },
+          { pubkey: vaultPDA, isSigner: false, isWritable: true },
+          { pubkey: myrcTreasuryPDA, isSigner: false, isWritable: false },
+          { pubkey: myrcTreasuryVaultPDA, isSigner: false, isWritable: true },
+          { pubkey: myrcMint.publicKey, isSigner: false, isWritable: false },
+          { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+          { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+        ],
+        data: buildCreateData(id, totalAmount, 1, 0, expiresAt, rpBump, vaultBump),
+      })
+    );
+    tx.sign(creator);
+    svm.sendTransaction(tx);
+
+    // Claim
+    const claimer = Keypair.generate();
+    svm.airdrop(claimer.publicKey, BigInt(LAMPORTS_PER_SOL));
+    const claimerTA = createAndFundTokenAccount(
+      svm, claimer, myrcMint.publicKey, mintAuthority, claimer.publicKey, 0n
+    );
+
+    blockhash = svm.latestBlockhash();
+    tx = new Transaction();
+    tx.recentBlockhash = blockhash;
+    tx.add(
+      new TransactionInstruction({
+        programId: PROGRAM_ID,
+        keys: [
+          { pubkey: claimer.publicKey, isSigner: true, isWritable: true },
+          { pubkey: claimerTA.publicKey, isSigner: false, isWritable: true },
+          { pubkey: redPacketPDA, isSigner: false, isWritable: true },
+          { pubkey: vaultPDA, isSigner: false, isWritable: true },
+          { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+        ],
+        data: buildClaimData(),
+      })
+    );
+    tx.sign(claimer);
+    svm.sendTransaction(tx);
+
+    // Close
+    blockhash = svm.latestBlockhash();
+    tx = new Transaction();
+    tx.recentBlockhash = blockhash;
+    tx.add(
+      new TransactionInstruction({
+        programId: PROGRAM_ID,
+        keys: [
+          { pubkey: creator.publicKey, isSigner: true, isWritable: true },
+          { pubkey: creatorTA.publicKey, isSigner: false, isWritable: true },
+          { pubkey: redPacketPDA, isSigner: false, isWritable: true },
+          { pubkey: vaultPDA, isSigner: false, isWritable: true },
+          { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+        ],
+        data: buildCloseData(),
+      })
+    );
+    tx.sign(creator);
+    svm.sendTransaction(tx);
+
+    expect(svm.getAccount(redPacketPDA)).to.be.null;
+    expect(svm.getAccount(vaultPDA)).to.be.null;
+
+    console.log("    MYRC red packet closed after full claim");
+  });
+
+  it("Rejects creating USDC red packet with MYRC treasury (cross-mint)", () => {
+    const { svm, mintAuthority, mint, myrcTreasuryPDA, myrcTreasuryVaultPDA } = setupSVM();
+
+    const creator = Keypair.generate();
+    svm.airdrop(creator.publicKey, BigInt(10 * LAMPORTS_PER_SOL));
+
+    const totalAmount = 1_000_000n;
+    const fee = totalAmount * 10n / 10_000n;
+    const creatorTA = createAndFundTokenAccount(
+      svm, creator, mint.publicKey, mintAuthority, creator.publicKey,
+      totalAmount + fee
+    );
+
+    const id = 500n;
+    const [redPacketPDA, rpBump] = findRedPacketPDA(creator.publicKey, id);
+    const [vaultPDA, vaultBump] = findVaultPDA(creator.publicKey, id);
+    const expiresAt = BigInt(Math.floor(Date.now() / 1000) + 3600);
+
+    // Try to create USDC red packet but pass MYRC treasury — should fail (mint mismatch)
+    const blockhash = svm.latestBlockhash();
+    const tx = new Transaction();
+    tx.recentBlockhash = blockhash;
+    tx.add(
+      new TransactionInstruction({
+        programId: PROGRAM_ID,
+        keys: [
+          { pubkey: creator.publicKey, isSigner: true, isWritable: true },
+          { pubkey: creatorTA.publicKey, isSigner: false, isWritable: true },
+          { pubkey: redPacketPDA, isSigner: false, isWritable: true },
+          { pubkey: vaultPDA, isSigner: false, isWritable: true },
+          { pubkey: myrcTreasuryPDA, isSigner: false, isWritable: false },
+          { pubkey: myrcTreasuryVaultPDA, isSigner: false, isWritable: true },
+          { pubkey: mint.publicKey, isSigner: false, isWritable: false }, // USDC mint
+          { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+          { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+        ],
+        data: buildCreateData(id, totalAmount, 1, 0, expiresAt, rpBump, vaultBump),
+      })
+    );
+    tx.sign(creator);
+
+    try {
+      svm.sendTransaction(tx);
+      expect.fail("Should have rejected cross-mint treasury");
+    } catch (e: any) {
+      console.log("    Cross-mint treasury correctly rejected");
+    }
   });
 
   it("Rejects token_type mismatch (SOL claim on SPL red packet)", () => {

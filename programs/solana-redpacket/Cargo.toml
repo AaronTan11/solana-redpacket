@@ -11,6 +11,7 @@ name = "solana_redpacket"
 [features]
 default = []
 no-entrypoint = []
+logging = []
 
 [dependencies]
 pinocchio = { version = "0.10", features = ["cpi"] }
