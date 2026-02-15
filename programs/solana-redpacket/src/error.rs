@@ -24,6 +24,7 @@ pub enum RedPacketError {
     InvalidTokenAccount = 18,
     InvalidTokenProgram = 19,
     InvalidSystemProgram = 20,
+    InvalidTokenType = 21,
 }
 
 impl From<RedPacketError> for ProgramError {

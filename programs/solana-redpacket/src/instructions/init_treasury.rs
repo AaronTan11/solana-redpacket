@@ -6,8 +6,7 @@ use pinocchio::{
 };
 use pinocchio_system::instructions::CreateAccount;
 use pinocchio_token::instructions::InitializeAccount3;
-use solana_program_log::log;
-
+use crate::log;
 use crate::constants::{
     ID, SYSTEM_PROGRAM_ID, TOKEN_ACCOUNT_SIZE, TOKEN_PROGRAM_ID, TREASURY_SEED, TREASURY_SIZE,
     TREASURY_VAULT_SEED,

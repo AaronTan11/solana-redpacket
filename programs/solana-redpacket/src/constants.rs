@@ -10,6 +10,10 @@ pub const VAULT_SEED: &[u8] = b"vault";
 pub const TREASURY_SEED: &[u8] = b"treasury";
 pub const TREASURY_VAULT_SEED: &[u8] = b"treasury_vault";
 
+/// Token types
+pub const TOKEN_TYPE_SPL: u8 = 0;
+pub const TOKEN_TYPE_SOL: u8 = 1;
+
 /// Limits
 pub const MAX_RECIPIENTS: u8 = 20;
 
@@ -26,9 +30,9 @@ pub const FEE_RATE_BPS: u64 = 10;
 pub const FEE_DENOMINATOR: u64 = 10_000;
 
 /// Account sizes
-pub const REDPACKET_BASE_SIZE: usize = 70;
+pub const REDPACKET_BASE_SIZE: usize = 71;
 pub const PER_RECIPIENT_SIZE: usize = 40;
-pub const TREASURY_SIZE: usize = 35; // discriminator(1) + bump(1) + vault_bump(1) + mint(32)
+pub const TREASURY_SIZE: usize = 43; // discriminator(1) + bump(1) + vault_bump(1) + mint(32) + sol_fees(8)
 pub const TOKEN_ACCOUNT_SIZE: usize = 165;
 
 pub const fn redpacket_size(num_recipients: u8) -> usize {

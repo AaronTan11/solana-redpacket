@@ -1,7 +1,7 @@
 use pinocchio::{AccountView, Address};
 use pinocchio::error::ProgramError;
 
-use crate::constants::{REDPACKET_BASE_SIZE, REDPACKET_DISCRIMINATOR, TREASURY_DISCRIMINATOR, TREASURY_SIZE};
+use crate::constants::{REDPACKET_BASE_SIZE, REDPACKET_DISCRIMINATOR, TOKEN_TYPE_SOL, TOKEN_TYPE_SPL, TREASURY_DISCRIMINATOR, TREASURY_SIZE};
 use crate::error::RedPacketError;
 
 // ========================
@@ -17,9 +17,10 @@ use crate::error::RedPacketError;
 // 59      split_mode         u8      1
 // 60      bump               u8      1
 // 61      vault_bump         u8      1
-// 62      expires_at         i64     8
-// 70      amounts            [u64;N] 8*N
-// 70+8N   claimers           [[u8;32];N] 32*N
+// 62      token_type         u8      1   (0=SPL, 1=SOL)
+// 63      expires_at         i64     8
+// 71      amounts            [u64;N] 8*N
+// 71+8N   claimers           [[u8;32];N] 32*N
 
 const DISCRIMINATOR_OFFSET: usize = 0;
 const CREATOR_OFFSET: usize = 1;
@@ -31,8 +32,9 @@ const NUM_CLAIMED_OFFSET: usize = 58;
 const SPLIT_MODE_OFFSET: usize = 59;
 const BUMP_OFFSET: usize = 60;
 const VAULT_BUMP_OFFSET: usize = 61;
-const EXPIRES_AT_OFFSET: usize = 62;
-const AMOUNTS_OFFSET: usize = 70;
+const TOKEN_TYPE_OFFSET: usize = 62;
+const EXPIRES_AT_OFFSET: usize = 63;
+const AMOUNTS_OFFSET: usize = 71;
 
 fn read_u64(data: &[u8], offset: usize) -> u64 {
     let bytes: [u8; 8] = data[offset..offset + 8].try_into().unwrap();
@@ -109,6 +111,10 @@ pub fn get_vault_bump(data: &[u8]) -> u8 {
     data[VAULT_BUMP_OFFSET]
 }
 
+pub fn get_token_type(data: &[u8]) -> u8 {
+    data[TOKEN_TYPE_OFFSET]
+}
+
 pub fn get_expires_at(data: &[u8]) -> i64 {
     read_i64(data, EXPIRES_AT_OFFSET)
 }
@@ -135,6 +141,7 @@ pub fn init_redpacket(
     split_mode: u8,
     bump: u8,
     vault_bump: u8,
+    token_type: u8,
     expires_at: i64,
     amounts: &[u64],
 ) {
@@ -148,6 +155,7 @@ pub fn init_redpacket(
     data[SPLIT_MODE_OFFSET] = split_mode;
     data[BUMP_OFFSET] = bump;
     data[VAULT_BUMP_OFFSET] = vault_bump;
+    data[TOKEN_TYPE_OFFSET] = token_type;
     write_i64(data, EXPIRES_AT_OFFSET, expires_at);
 
     for (i, &amount) in amounts.iter().enumerate() {
@@ -182,15 +190,17 @@ pub fn has_claimed(data: &[u8], num_recipients: u8, num_claimed: u8, claimer: &[
 // ========================
 // Treasury account layout
 // ========================
-// 0    discriminator   u8      1   (= 2)
-// 1    bump            u8      1
-// 2    vault_bump      u8      1
-// 3    mint            [u8;32] 32
+// 0    discriminator       u8      1   (= 2)
+// 1    bump                u8      1
+// 2    vault_bump          u8      1
+// 3    mint                [u8;32] 32
+// 35   sol_fees_collected  u64     8
 
 const TREASURY_DISCRIMINATOR_OFFSET: usize = 0;
 const TREASURY_BUMP_OFFSET: usize = 1;
 const TREASURY_VAULT_BUMP_OFFSET: usize = 2;
 const TREASURY_MINT_OFFSET: usize = 3;
+const SOL_FEES_OFFSET: usize = 35;
 
 pub fn validate_treasury(account: &AccountView, program_id: &Address) -> Result<(), ProgramError> {
     if !account.owned_by(program_id) {
@@ -223,4 +233,19 @@ pub fn get_treasury_vault_bump(data: &[u8]) -> u8 {
 
 pub fn get_treasury_mint(data: &[u8]) -> &[u8] {
     &data[TREASURY_MINT_OFFSET..TREASURY_MINT_OFFSET + 32]
+}
+
+pub fn get_sol_fees_collected(data: &[u8]) -> u64 {
+    read_u64(data, SOL_FEES_OFFSET)
+}
+
+pub fn set_sol_fees_collected(data: &mut [u8], amount: u64) {
+    write_u64(data, SOL_FEES_OFFSET, amount);
+}
+
+pub fn validate_token_type(token_type: u8) -> Result<(), ProgramError> {
+    if token_type != TOKEN_TYPE_SPL && token_type != TOKEN_TYPE_SOL {
+        return Err(RedPacketError::InvalidTokenType.into());
+    }
+    Ok(())
 }

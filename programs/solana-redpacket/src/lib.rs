@@ -3,14 +3,16 @@ pub mod error;
 pub mod instructions;
 pub mod state;
 
-use pinocchio::{entrypoint, AccountView, Address, ProgramResult};
+use pinocchio::{AccountView, Address, ProgramResult};
 use pinocchio::error::ProgramError;
 
 use instructions::{
     process_claim, process_close, process_create, process_init_treasury, process_withdraw_fees,
 };
 
-entrypoint!(process_instruction);
+pinocchio::program_entrypoint!(process_instruction);
+pinocchio::no_allocator!();
+pinocchio::default_panic_handler!();
 
 pub fn process_instruction(
     _program_id: &Address,
@@ -28,5 +30,19 @@ pub fn process_instruction(
         3 => process_init_treasury(accounts, data),
         4 => process_withdraw_fees(accounts, data),
         _ => Err(ProgramError::InvalidInstructionData),
+    }
+}
+
+// Raw sol_log syscall — replaces solana-program-log dependency
+#[cfg(target_os = "solana")]
+extern "C" {
+    fn sol_log_(message: *const u8, len: u64);
+}
+
+#[inline(always)]
+pub fn log(msg: &str) {
+    #[cfg(target_os = "solana")]
+    unsafe {
+        sol_log_(msg.as_ptr(), msg.len() as u64);
     }
 }
