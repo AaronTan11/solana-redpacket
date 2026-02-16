@@ -39,9 +39,9 @@ pub const fn redpacket_size(num_recipients: u8) -> usize {
     REDPACKET_BASE_SIZE + PER_RECIPIENT_SIZE * num_recipients as usize
 }
 
-/// Admin authority for fee withdrawal (placeholder — replace with real pubkey)
+/// Admin authority for fee withdrawal
 pub const ADMIN: Address = Address::new_from_array(five8_const::decode_32_const(
-    "ADMNqGCquVC3xPkhttaUSCMFhSmu3rBVsRRBKjLFMbhg",
+    "HyBxuaafzKP6k4zkEDUp4LrZctS9mJVNUEEJBmp9cp7L",
 ));
 
 /// Sentinel "mint" for native SOL treasury PDA derivation (not a real mint)

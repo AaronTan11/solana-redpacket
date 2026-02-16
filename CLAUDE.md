@@ -75,14 +75,14 @@ Red packet (hongbao) system supporting **native SOL** and **multiple SPL tokens*
 - **SOL fee withdrawal**: Available = `min(sol_fees_collected, treasury.lamports - rent_exempt)`. Prevents withdrawing rent from treasury.
 - **Split modes**: 0 = even (program computes), 1 = random (client pre-computes amounts in instruction data).
 - **Max 20 recipients** per red packet.
-- **Admin pubkey** for fee withdrawal is hardcoded in `constants.rs` (placeholder: `ADMNqGCquVC3xPkhttaUSCMFhSmu3rBVsRRBKjLFMbhg`).
+- **Admin pubkey** for fee withdrawal is hardcoded in `constants.rs` (`HyBxuaafzKP6k4zkEDUp4LrZctS9mJVNUEEJBmp9cp7L`). The matching secret key is in the test file as `ADMIN_KEYPAIR`.
 - **SOL defense-in-depth**: SOL claim/close verify `vault.owned_by(&ID)` since there's no token program CPI to enforce ownership.
 - **overflow-checks = false**: Safe because all arithmetic uses explicit `.checked_add/sub/mul()` with `ArithmeticOverflow` error handling. Unchecked operations are bounded by construction (e.g., index math capped at 231, counters capped at 20).
 - **Rent hardcoded**: `rent_exempt()` const fn in `constants.rs` uses formula `(data_len + 128) * 2 * 3480`. Avoids Rent sysvar syscall overhead. Values stable since Solana genesis.
 
 ### Tests (`tests/solana-redpacket.ts`)
 
-Uses **LiteSVM** (in-memory SVM, no validator needed). The `setupSVM()` helper creates mock USDC + MYRC mints and initializes 3 treasuries (USDC, MYRC, SOL), returning a ready-to-use test environment. All instruction data is built manually matching the on-chain byte layout. Data builders accept `tokenType` parameter (default `0` for SPL). 31 tests: 19 USDC + 4 MYRC + 8 SOL.
+Uses **LiteSVM** (in-memory SVM, no validator needed). The `setupSVM()` helper creates mock USDC + MYRC mints and initializes 3 treasuries (USDC, MYRC, SOL), returning a ready-to-use test environment. All instruction data is built manually matching the on-chain byte layout. Data builders accept `tokenType` parameter (default `0` for SPL). 47 tests: 19 USDC + 4 MYRC + 8 SOL core tests, plus 7 fee withdrawal (SPL + SOL), 5 input validation, 2 edge cases, 1 SOL lifecycle, 1 SOL treasury init.
 
 ### Dependencies
 
