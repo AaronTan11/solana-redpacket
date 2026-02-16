@@ -82,7 +82,11 @@ Red packet (hongbao) system supporting **native SOL** and **multiple SPL tokens*
 
 ### Tests (`tests/solana-redpacket.ts`)
 
-Uses **LiteSVM** (in-memory SVM, no validator needed). The `setupSVM()` helper creates mock USDC + MYRC mints and initializes 3 treasuries (USDC, MYRC, SOL), returning a ready-to-use test environment. All instruction data is built manually matching the on-chain byte layout. Data builders accept `tokenType` parameter (default `0` for SPL). 47 tests: 19 USDC + 4 MYRC + 8 SOL core tests, plus 7 fee withdrawal (SPL + SOL), 5 input validation, 2 edge cases, 1 SOL lifecycle, 1 SOL treasury init.
+Uses **LiteSVM** (in-memory SVM, no validator needed). The `setupSVM()` helper creates mock USDC + MYRC mints and initializes 3 treasuries (USDC, MYRC, SOL), returning a ready-to-use test environment. All instruction data is built manually matching the on-chain byte layout. Data builders accept `tokenType` parameter (default `0` for SPL). 63 tests covering all 22/22 error variants. Breakdown: 19 USDC + 4 MYRC + 8 SOL core, 7 fee withdrawal, 5 input validation, 2 edge cases, 1 SOL lifecycle, 1 SOL treasury init, 8 security guards, 8 remaining validation paths (NotEnoughAccounts, InvalidTokenAccount, zero-slot random split, invalid token_type value, SOL expired claim, SOL excess withdrawal, close fake token program, truncated data).
+
+### Deploy
+
+Binary: **57,200 bytes**. Permanent rent: **~0.40 SOL**. Peak during deploy: **~0.80 SOL** (buffer reclaimed after). Use `--max-len 114400` for 2x upgrade headroom (~0.80 SOL permanent).
 
 ### Dependencies
 
