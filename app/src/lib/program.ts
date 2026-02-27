@@ -532,3 +532,6 @@ export function formatAmount(
   }
   return fracStr ? `${whole}.${fracStr}` : `${whole}`;
 }
+
+export const BLINKS_BASE_URL =
+  import.meta.env.VITE_BLINKS_URL || "http://46.62.206.161";

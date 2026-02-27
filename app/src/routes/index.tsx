@@ -30,6 +30,7 @@ import {
   computeFee,
   generateRandomSplit,
   formatAmount,
+  BLINKS_BASE_URL,
 } from "@/lib/program";
 import { sendTransaction } from "@/lib/transaction";
 import { getAssociatedTokenAddress } from "@/lib/ata";
@@ -75,6 +76,7 @@ function CreateForm({
   const [expiryHours, setExpiryHours] = useState(24);
   const [isSending, setIsSending] = useState(false);
   const [claimUrl, setClaimUrl] = useState<string | null>(null);
+  const [blinkUrl, setBlinkUrl] = useState<string | null>(null);
 
   const isSol = tokenType === TOKEN_TYPE_SOL;
   const decimals = isSol ? 9 : 6;
@@ -147,6 +149,9 @@ function CreateForm({
 
       const url = `${window.location.origin}/claim/${creatorAddress}/${id}`;
       setClaimUrl(url);
+      setBlinkUrl(
+        `${BLINKS_BASE_URL}/api/actions/claim?creator=${creatorAddress}&id=${id}`
+      );
       toast.success("Red packet created!");
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Transaction failed";
@@ -294,7 +299,7 @@ function CreateForm({
         </CardContent>
       </Card>
 
-      {/* Claim URL */}
+      {/* Claim URLs */}
       {claimUrl && (
         <Card>
           <CardHeader>
@@ -303,20 +308,45 @@ function CreateForm({
               Recipients can claim by visiting this URL
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2">
-            <code className="block break-all rounded bg-muted p-3 text-sm">
-              {claimUrl}
-            </code>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                navigator.clipboard.writeText(claimUrl);
-                toast.success("Link copied!");
-              }}
-            >
-              Copy Link
-            </Button>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">
+                Website Link
+              </Label>
+              <code className="block break-all rounded bg-muted p-3 text-sm">
+                {claimUrl}
+              </code>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  navigator.clipboard.writeText(claimUrl);
+                  toast.success("Link copied!");
+                }}
+              >
+                Copy Link
+              </Button>
+            </div>
+            {blinkUrl && (
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">
+                  Blink URL (Solana Actions)
+                </Label>
+                <code className="block break-all rounded bg-muted p-3 text-sm">
+                  {blinkUrl}
+                </code>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    navigator.clipboard.writeText(blinkUrl);
+                    toast.success("Blink URL copied!");
+                  }}
+                >
+                  Copy Blink URL
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

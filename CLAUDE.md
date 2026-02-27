@@ -105,7 +105,7 @@ cd app && npx tsc --noEmit  # type-check
 
 **Routes** (`app/src/routes/`):
 - `__root.tsx` — Root layout: navbar (Create, Dashboard, Admin gated to admin wallet) + wallet button + Toaster
-- `index.tsx` — Create red packet form (SOL/SPL toggle, amount, recipients, split mode, expiry)
+- `index.tsx` — Create red packet form (SOL/SPL toggle, amount, recipients, split mode, expiry). Success card shows both website claim URL and blink claim URL (`BLINKS_BASE_URL` from `VITE_BLINKS_URL` env var)
 - `claim.$creator.$id.tsx` — Claim page (fetches on-chain state, shows slots, claim button)
 - `dashboard.tsx` — My Red Packets via `getProgramAccounts` + memcmp filter on creator
 - `admin.tsx` — Admin fee withdrawal (gated by ADMIN pubkey)
@@ -165,6 +165,7 @@ cd app && vercel --prod   # deploy to production
 Env vars (set in Vercel dashboard, not in code):
 - `VITE_RPC_URL` — Helius devnet RPC (has API key, never commit)
 - `VITE_WS_URL` — WebSocket RPC (optional, falls back to public devnet)
+- `VITE_BLINKS_URL` — Blinks server base URL (optional, falls back to `http://46.62.206.161`)
 
 **Blinks server**: Deployed on Hetzner VPS at **http://46.62.206.161** (Ubuntu 24.04 aarch64). Runs as systemd service `redpacket-blinks`.
 
