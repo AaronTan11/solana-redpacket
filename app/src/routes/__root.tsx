@@ -93,6 +93,11 @@ function AppShell() {
           <ConnectWallet />
         </nav>
       </header>
+      <div className="bg-amber-950/50 border-b border-amber-800/30">
+        <p className="mx-auto max-w-4xl px-4 py-1.5 text-center text-xs text-amber-400">
+          Devnet only — this app uses Solana devnet tokens with no real value
+        </p>
+      </div>
       <main className="mx-auto max-w-4xl px-4 py-8">
         <Outlet />
       </main>

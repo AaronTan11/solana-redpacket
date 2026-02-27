@@ -45,7 +45,7 @@ impl Action for CloseAction {
 
         let remaining_sol = program::lamports_to_sol(rp.remaining_amount);
         let description = format!(
-            "{}/{} claimed — {remaining_sol} SOL remaining",
+            "{}/{} claimed — {remaining_sol} SOL remaining (devnet)",
             rp.num_claimed, rp.num_recipients
         );
 

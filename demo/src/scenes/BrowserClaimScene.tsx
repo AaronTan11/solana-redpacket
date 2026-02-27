@@ -65,7 +65,22 @@ const MockClaimPage = ({ frame, fps }: { frame: number; fps: number }) => {
         </div>
       </div>
 
-      <div style={{ maxWidth: 600, width: "100%", padding: "0 24px" }}>
+      {/* Devnet banner */}
+      <div
+        style={{
+          width: "100%",
+          background: "rgba(120, 53, 15, 0.5)",
+          borderBottom: "1px solid rgba(180, 83, 9, 0.3)",
+          padding: "5px 0",
+          textAlign: "center",
+          fontSize: 11,
+          color: "#fbbf24",
+        }}
+      >
+        Devnet only — this app uses Solana devnet tokens with no real value
+      </div>
+
+      <div style={{ maxWidth: 600, width: "100%", padding: "0 24px", marginTop: 16 }}>
         {/* Claim card */}
         <div
           style={{

@@ -534,4 +534,4 @@ export function formatAmount(
 }
 
 export const BLINKS_BASE_URL =
-  import.meta.env.VITE_BLINKS_URL || "http://blinks.redpackets.space";
+  import.meta.env.VITE_BLINKS_URL || "https://blinks.redpackets.space";

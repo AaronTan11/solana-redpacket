@@ -1,6 +1,33 @@
 import { useCurrentFrame, useVideoConfig, interpolate, spring } from "remotion";
 import { colors, fullScreen } from "../styles";
 
+const RedPacketIcon = () => (
+  <svg viewBox="0 0 512 512" width="100%" height="100%">
+    <defs>
+      <linearGradient id="bg" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#ef4444" />
+        <stop offset="100%" stopColor="#b91c1c" />
+      </linearGradient>
+      <linearGradient id="flap" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#dc2626" />
+        <stop offset="100%" stopColor="#991b1b" />
+      </linearGradient>
+      <linearGradient id="gold" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#fbbf24" />
+        <stop offset="100%" stopColor="#d97706" />
+      </linearGradient>
+    </defs>
+    <rect x="80" y="100" width="352" height="360" rx="24" fill="url(#bg)" />
+    <path d="M80 100 L256 220 L432 100 L432 124 L256 244 L80 124 Z" fill="url(#flap)" />
+    <circle cx="256" cy="310" r="72" fill="url(#gold)" opacity="0.95" />
+    <text x="256" y="330" textAnchor="middle" fontSize="80" fontWeight="bold" fill="#b91c1c" fontFamily="serif">
+      &#31119;
+    </text>
+    <rect x="100" y="160" width="312" height="2" rx="1" fill="#fbbf24" opacity="0.3" />
+    <rect x="100" y="420" width="312" height="2" rx="1" fill="#fbbf24" opacity="0.3" />
+  </svg>
+);
+
 export const BlinksScene = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -19,7 +46,7 @@ export const BlinksScene = () => {
     extrapolateLeft: "clamp",
   });
 
-  const urlOpacity = interpolate(frame, [fps * 1.8, fps * 2.2], [0, 1], {
+  const urlOpacity = interpolate(frame, [fps * 3, fps * 3.5], [0, 1], {
     extrapolateRight: "clamp",
     extrapolateLeft: "clamp",
   });
@@ -53,62 +80,119 @@ export const BlinksScene = () => {
         Share as a <span style={{ color: colors.red }}>Blink</span>
       </h2>
 
-      {/* Mock blink card */}
+      {/* Blink card matching dial.to */}
       <div
         style={{
-          background: colors.bgCard,
-          border: `1px solid ${colors.grayDarker}`,
+          background: "#fff",
           borderRadius: 16,
           width: 480,
           overflow: "hidden",
           opacity: cardOpacity,
           transform: `scale(${Math.max(0, cardScale)})`,
+          boxShadow: "0 4px 24px rgba(0,0,0,0.3)",
+          border: "1px solid #e5e5e5",
         }}
       >
-        {/* Blink header */}
+        {/* Icon area */}
         <div
           style={{
-            background: `linear-gradient(135deg, ${colors.redDark}, ${colors.red})`,
-            padding: "32px 28px",
+            background: "#f5f5f5",
             display: "flex",
             alignItems: "center",
-            gap: 16,
+            justifyContent: "center",
+            padding: "32px 0",
           }}
         >
-          <span style={{ fontSize: 48 }}>🧧</span>
-          <div>
-            <div style={{ fontSize: 22, fontWeight: 700, color: colors.white }}>
-              Red Packet
-            </div>
-            <div style={{ fontSize: 14, color: "rgba(255,255,255,0.7)" }}>
-              0.50 SOL · 3 slots remaining
-            </div>
+          <div style={{ width: 200, height: 200 }}>
+            <RedPacketIcon />
           </div>
         </div>
 
-        {/* Blink body */}
-        <div style={{ padding: "20px 28px" }}>
-          <p style={{ fontSize: 16, color: colors.gray, margin: "0 0 20px" }}>
-            Claim your share of this red packet! Connect your wallet and hit
-            claim.
-          </p>
+        {/* Card body */}
+        <div style={{ padding: "16px 24px 24px" }}>
+          {/* Domain */}
           <div
             style={{
-              background: colors.red,
-              borderRadius: 10,
-              padding: "12px 0",
-              textAlign: "center",
-              fontSize: 16,
-              fontWeight: 700,
-              color: colors.white,
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              marginBottom: 4,
             }}
           >
-            Claim SOL
+            <span style={{ fontSize: 13, color: "#737373" }}>
+              blinks.redpackets.space
+            </span>
+            <span
+              style={{
+                width: 14,
+                height: 14,
+                borderRadius: "50%",
+                background: "#f59e0b",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 9,
+                color: "#fff",
+                fontWeight: 700,
+              }}
+            >
+              !
+            </span>
+          </div>
+
+          {/* Title */}
+          <div
+            style={{
+              fontSize: 18,
+              fontWeight: 700,
+              color: "#171717",
+              marginBottom: 4,
+            }}
+          >
+            Red Packet
+          </div>
+
+          {/* Description */}
+          <div
+            style={{
+              fontSize: 14,
+              color: "#525252",
+              marginBottom: 16,
+            }}
+          >
+            0.50 SOL red packet — 0/5 claimed, 0.50 SOL remaining
+          </div>
+
+          {/* Claim button */}
+          <div
+            style={{
+              background: "#171717",
+              borderRadius: 12,
+              padding: "14px 0",
+              textAlign: "center",
+              fontSize: 16,
+              fontWeight: 600,
+              color: "#fff",
+            }}
+          >
+            Claim (Random Amount)
+          </div>
+
+          {/* Powered by */}
+          <div
+            style={{
+              textAlign: "center",
+              marginTop: 12,
+              fontSize: 12,
+              color: "#a3a3a3",
+            }}
+          >
+            powered by Dialect
           </div>
         </div>
       </div>
 
-      {/* URL */}
+      {/* URL below */}
       <div
         style={{
           marginTop: 32,
@@ -131,7 +215,7 @@ export const BlinksScene = () => {
             borderRadius: 8,
           }}
         >
-          /api/actions/claim?creator=7xKd...&id=123
+          dial.to/?action=solana-action:blinks.redpackets.space/api/actions/claim?...
         </code>
       </div>
     </div>

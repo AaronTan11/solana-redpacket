@@ -38,4 +38,4 @@ pub const FEE_DENOMINATOR: u64 = 10_000;
 pub const MAX_RECIPIENTS: u8 = 20;
 
 /// Icon URL for blink cards
-pub const ICON_URL: &str = "https://arweave.net/placeholder-red-packet-icon";
+pub const ICON_URL: &str = "https://redpackets.space/red-packet-icon.svg";

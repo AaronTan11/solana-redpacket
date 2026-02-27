@@ -30,7 +30,7 @@ impl Action for CreateAction {
         let resp = ActionGetResponse::new(
             ICON_URL,
             "Create Red Packet",
-            "Create a shareable SOL red packet that friends can claim",
+            "Create a shareable SOL red packet that friends can claim (devnet)",
             "Create",
         )
         .with_links(vec![LinkedAction {

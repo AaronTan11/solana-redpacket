@@ -56,7 +56,7 @@ impl Action for ClaimAction {
         let remaining_sol = program::lamports_to_sol(rp.remaining_amount);
 
         let description = format!(
-            "{total_sol} SOL red packet — {}/{} claimed, {remaining_sol} SOL remaining",
+            "{total_sol} SOL red packet — {}/{} claimed, {remaining_sol} SOL remaining (devnet)",
             rp.num_claimed, rp.num_recipients
         );
 

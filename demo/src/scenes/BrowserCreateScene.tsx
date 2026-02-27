@@ -45,6 +45,7 @@ const MockCreateForm = ({ frame, fps }: { frame: number; fps: number }) => {
       >
         {/* Nav bar */}
         <NavBar />
+        <DevnetBanner />
         <div
           style={{
             maxWidth: 600,
@@ -120,6 +121,7 @@ const MockCreateForm = ({ frame, fps }: { frame: number; fps: number }) => {
       }}
     >
       <NavBar />
+      <DevnetBanner />
       <div style={{ maxWidth: 600, width: "100%", padding: "0 24px" }}>
         <h1 style={{ fontSize: 24, fontWeight: 700, color: "#fff", marginBottom: 4 }}>
           Create Red Packet
@@ -278,6 +280,22 @@ const MockCreateForm = ({ frame, fps }: { frame: number; fps: number }) => {
     </div>
   );
 };
+
+const DevnetBanner = () => (
+  <div
+    style={{
+      width: "100%",
+      background: "rgba(120, 53, 15, 0.5)",
+      borderBottom: "1px solid rgba(180, 83, 9, 0.3)",
+      padding: "5px 0",
+      textAlign: "center",
+      fontSize: 11,
+      color: "#fbbf24",
+    }}
+  >
+    Devnet only — this app uses Solana devnet tokens with no real value
+  </div>
+);
 
 const NavBar = () => (
   <div
