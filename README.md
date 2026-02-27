@@ -5,7 +5,7 @@ On-chain red packets for Solana — send SOL (or any SPL token) to friends and l
 ## Live Demo
 
 - **Frontend**: https://redpackets.space
-- **Blinks Server**: http://blinks.redpackets.space
+- **Blinks Server**: https://blinks.redpackets.space
 - **Program (Devnet)**: `CeAkHjhJzgrwbg8QWQ8tx6h5UxMZVKuGBeEDYczbc6Gz`
 
 ## How It Works
@@ -72,7 +72,6 @@ Rust **Axum** server implementing the **Solana Actions** spec. Returns unsigned 
 
 ## Roadmap
 
-- HTTPS for blinks server (required for Twitter/Dialect rendering)
 - Mainnet deployment
 - SPL token support in blinks (currently SOL only)
 - Red packet themes and custom messages
@@ -116,9 +115,5 @@ cd blinks/scripts && npx tsx e2e-test.ts
 │       ├── actions/             # create, claim, close action handlers
 │       ├── program.rs           # Rust PDA + instruction builders
 │       └── router.rs            # Axum routes + Solana Actions spec
-└── CLAUDE.md                    # Full architecture reference
+└── demo/                        # Remotion demo video
 ```
-
-## License
-
-MIT
