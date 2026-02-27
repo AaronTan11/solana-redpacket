@@ -1,5 +1,8 @@
 import { useSelectedWalletAccount } from "@solana/react";
-import type { UiWallet } from "@wallet-standard/react";
+import type { UiWallet, UiWalletAccount } from "@wallet-standard/react";
+import { useConnect, uiWalletAccountsAreSame } from "@wallet-standard/react";
+import { StandardConnect } from "@wallet-standard/features";
+import { useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -9,15 +12,47 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+function ConnectableWalletItem({
+  wallet,
+  onAccountSelect,
+}: {
+  wallet: UiWallet;
+  onAccountSelect: (account: UiWalletAccount) => void;
+}) {
+  const [isConnecting, connect] = useConnect(wallet);
+
+  const handleClick = useCallback(async () => {
+    try {
+      const existingAccounts = [...wallet.accounts];
+      const nextAccounts = await connect();
+      for (const nextAccount of nextAccounts) {
+        if (
+          !existingAccounts.some((a) =>
+            uiWalletAccountsAreSame(nextAccount, a),
+          )
+        ) {
+          onAccountSelect(nextAccount);
+          return;
+        }
+      }
+      if (nextAccounts[0]) {
+        onAccountSelect(nextAccounts[0]);
+      }
+    } catch {
+      // User rejected or wallet error — do nothing
+    }
+  }, [connect, onAccountSelect, wallet.accounts]);
+
+  return (
+    <DropdownMenuItem disabled={isConnecting} onClick={handleClick}>
+      {isConnecting ? "Connecting..." : wallet.name}
+    </DropdownMenuItem>
+  );
+}
+
 export function ConnectWallet() {
   const [selectedWalletAccount, setSelectedWalletAccount, wallets] =
     useSelectedWalletAccount();
-
-  function handleSelect(wallet: UiWallet) {
-    if (wallet.accounts.length > 0) {
-      setSelectedWalletAccount(wallet.accounts[0]);
-    }
-  }
 
   function handleDisconnect() {
     setSelectedWalletAccount(undefined);
@@ -49,22 +84,25 @@ export function ConnectWallet() {
     );
   }
 
+  const connectableWallets = wallets.filter((w) =>
+    w.features.includes(StandardConnect),
+  );
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button size="sm">Connect Wallet</Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        {wallets.length === 0 ? (
+        {connectableWallets.length === 0 ? (
           <DropdownMenuItem disabled>No wallets found</DropdownMenuItem>
         ) : (
-          wallets.map((wallet) => (
-            <DropdownMenuItem
-              key={wallet.name}
-              onClick={() => handleSelect(wallet)}
-            >
-              {wallet.name}
-            </DropdownMenuItem>
+          connectableWallets.map((wallet) => (
+            <ConnectableWalletItem
+              key={`wallet:${wallet.name}`}
+              wallet={wallet}
+              onAccountSelect={setSelectedWalletAccount}
+            />
           ))
         )}
       </DropdownMenuContent>

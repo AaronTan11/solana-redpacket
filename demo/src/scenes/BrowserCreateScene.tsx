@@ -83,7 +83,7 @@ const MockCreateForm = ({ frame, fps }: { frame: number; fps: number }) => {
                 marginBottom: 12,
               }}
             >
-              solana-redpacket.vercel.app/claim/7xKd...m3Fv/1740000000
+              redpackets.space/claim/7xKd...m3Fv/1740000000
             </code>
             <div style={{ fontSize: 12, color: "#a1a1aa", marginBottom: 6, fontWeight: 600 }}>
               Blink URL (Solana Actions)
@@ -99,7 +99,7 @@ const MockCreateForm = ({ frame, fps }: { frame: number; fps: number }) => {
                 wordBreak: "break-all",
               }}
             >
-              46.62.206.161/api/actions/claim?creator=7xKd...&id=1740000000
+              blinks.redpackets.space/api/actions/claim?creator=7xKd...&id=1740000000
             </code>
           </div>
         </div>
@@ -322,23 +322,25 @@ export const BrowserCreateScene = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  // Cursor keypoints (x, y relative to browser content)
+  // Cursor keypoints (x, y relative to browser content area: 1720x864)
+  // Form is maxWidth 600, centered → x range 560-1160, center x=860
+  // Card starts at roughly y=205, buttons/fields inside at offsets below
   const cursorPoints = [
-    { x: 500, y: 300, frame: 0 },
-    { x: 280, y: 248, frame: fps * 1.2 },    // SOL button
-    { x: 350, y: 310, frame: fps * 2.2 },    // Amount field
-    { x: 350, y: 370, frame: fps * 3.8 },    // Recipient slider
-    { x: 380, y: 425, frame: fps * 5.2 },    // Random button
-    { x: 400, y: 490, frame: fps * 7.5 },    // Create button
-    { x: 400, y: 490, frame: fps * 8 },      // Stay on button
-    { x: 400, y: 350, frame: fps * 9.5 },    // Move to success
+    { x: 700, y: 200, frame: 0 },             // Start in view
+    { x: 612, y: 299, frame: fps * 1.2 },     // SOL button (left side of card)
+    { x: 860, y: 368, frame: fps * 2.2 },     // Amount field (center)
+    { x: 750, y: 425, frame: fps * 3.8 },     // Recipient slider
+    { x: 688, y: 482, frame: fps * 5.2 },     // Random button
+    { x: 860, y: 541, frame: fps * 7.5 },     // Create button (full width, center)
+    { x: 860, y: 541, frame: fps * 8 },       // Stay on button
+    { x: 860, y: 350, frame: fps * 9.5 },     // Move to success area
   ];
 
   const clickFrames = [
-    { x: 280, y: 248, frame: Math.round(fps * 1.5) },
-    { x: 350, y: 310, frame: Math.round(fps * 2.5) },
-    { x: 380, y: 425, frame: Math.round(fps * 5.5) },
-    { x: 400, y: 490, frame: Math.round(fps * 8) },
+    { x: 612, y: 299, frame: Math.round(fps * 1.5) },   // Click SOL
+    { x: 860, y: 368, frame: Math.round(fps * 2.5) },   // Click amount field
+    { x: 688, y: 482, frame: Math.round(fps * 5.5) },   // Click Random
+    { x: 860, y: 541, frame: Math.round(fps * 8) },     // Click Create
   ];
 
   return (
@@ -359,7 +361,7 @@ export const BrowserCreateScene = () => {
         originY="70%"
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", height: "100%" }}>
-          <BrowserFrame url="solana-redpacket.vercel.app">
+          <BrowserFrame url="redpackets.space">
             <MockCreateForm frame={frame} fps={fps} />
             <Cursor points={cursorPoints} />
             <ClickEffects clicks={clickFrames} />

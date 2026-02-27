@@ -5,30 +5,30 @@ export const ProblemSolutionScene = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  // Problem text: 0 - 1.5s
-  const problemOpacity = interpolate(frame, [0, fps * 0.3], [0, 1], {
+  // Problem text: 0 - 5s
+  const problemOpacity = interpolate(frame, [0, fps * 0.5], [0, 1], {
     extrapolateRight: "clamp",
   });
-  const problemY = interpolate(frame, [0, fps * 0.3], [30, 0], {
+  const problemY = interpolate(frame, [0, fps * 0.5], [30, 0], {
     extrapolateRight: "clamp",
   });
 
-  // Transition: problem fades, solution appears at ~2s
+  // Transition: problem fades at ~4.5s, solution appears at ~5s
   const problemFade = interpolate(
     frame,
-    [fps * 1.5, fps * 2],
+    [fps * 4.5, fps * 5],
     [1, 0],
     { extrapolateRight: "clamp", extrapolateLeft: "clamp" }
   );
   const solutionOpacity = interpolate(
     frame,
-    [fps * 2, fps * 2.5],
+    [fps * 5, fps * 5.5],
     [0, 1],
     { extrapolateRight: "clamp", extrapolateLeft: "clamp" }
   );
   const solutionY = interpolate(
     frame,
-    [fps * 2, fps * 2.5],
+    [fps * 5, fps * 5.5],
     [30, 0],
     { extrapolateRight: "clamp", extrapolateLeft: "clamp" }
   );
@@ -65,11 +65,13 @@ export const ProblemSolutionScene = () => {
             color: colors.white,
             margin: 0,
             textAlign: "center",
-            maxWidth: 800,
+            maxWidth: 900,
             lineHeight: 1.2,
           }}
         >
-          Sending crypto to groups is clunky
+          Sending crypto to groups?
+          <br />
+          <span style={{ fontSize: 36, color: colors.gray }}>Multiple transfers, manual splitting.</span>
         </h2>
       </div>
 
@@ -107,8 +109,7 @@ export const ProblemSolutionScene = () => {
             lineHeight: 1.2,
           }}
         >
-          <span style={{ color: colors.red }}>Red Packets</span> — one link,
-          multiple recipients
+          There's a <span style={{ color: colors.red }}>better way</span>
         </h2>
       </div>
     </div>

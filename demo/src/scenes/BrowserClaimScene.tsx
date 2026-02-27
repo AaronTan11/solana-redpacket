@@ -122,45 +122,37 @@ const MockClaimPage = ({ frame, fps }: { frame: number; fps: number }) => {
             {claimCount}/5 claimed · Random split · Expires in 23h
           </div>
 
-          {/* Slots */}
-          {slots.map((slot, i) => {
-            const isFilling = i === 2 && slotFilled;
-            return (
-              <div
-                key={i}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  padding: "8px 12px",
-                  marginBottom: 4,
-                  borderRadius: 6,
-                  background:
-                    slot.claimed || isFilling
-                      ? "rgba(220,38,38,0.06)"
-                      : "rgba(39,39,42,0.4)",
-                }}
-              >
-                <span style={{ fontSize: 13, color: "#71717a" }}>
-                  Slot {i + 1}
-                  {(slot.claimed || isFilling) && (
-                    <span style={{ color: "#3f3f46", marginLeft: 8, fontSize: 11 }}>
-                      {isFilling ? "Bx9p..w4Tz" : slot.claimer}
-                    </span>
-                  )}
-                </span>
-                <span
+          {/* Claimed list */}
+          {slots
+            .filter((slot, i) => slot.claimed || (i === 2 && slotFilled))
+            .map((slot, i) => {
+              const isFilling = !slot.claimed;
+              return (
+                <div
+                  key={i}
                   style={{
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: slot.claimed || isFilling ? "#3f3f46" : "#fff",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "8px 12px",
+                    marginBottom: 4,
+                    borderRadius: 6,
+                    background: "rgba(220,38,38,0.06)",
                   }}
                 >
-                  {slot.amount} {slot.claimed || isFilling ? "✓" : ""}
-                </span>
-              </div>
-            );
-          })}
+                  <span style={{ fontSize: 13, color: "#71717a" }}>
+                    {isFilling ? "Bx9p..w4Tz" : slot.claimer}
+                  </span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "#a1a1aa" }}>
+                    {slot.amount}
+                  </span>
+                </div>
+              );
+            })}
+          {/* Remaining */}
+          <div style={{ fontSize: 12, color: "#52525b", marginTop: 4 }}>
+            {slotFilled ? "2" : "3"} remaining to claim
+          </div>
 
           {/* Claim button */}
           <div
@@ -175,7 +167,7 @@ const MockClaimPage = ({ frame, fps }: { frame: number; fps: number }) => {
               color: "#fff",
             }}
           >
-            {claimClicked ? "Claimed 0.12 SOL ✓" : "Claim Your Share"}
+            {claimClicked ? "Claimed! ✓" : "Claim Your Share"}
           </div>
         </div>
       </div>
@@ -191,17 +183,20 @@ export const BrowserClaimScene = () => {
     extrapolateRight: "clamp",
   });
 
+  // Content area: 1720x864. Claim card is maxWidth 600, centered → x: 560-1160, center x=860
+  // Nav ~76px, card starts ~136, header ~160, amount ~200, slots start ~278 (each ~40px)
+  // Claim button at ~y=498
   const cursorPoints = [
-    { x: 600, y: 200, frame: 0 },
-    { x: 400, y: 350, frame: fps * 2 },     // Browse slots
-    { x: 400, y: 450, frame: fps * 4 },     // Scroll down
-    { x: 400, y: 530, frame: fps * 6 },     // Claim button
-    { x: 400, y: 530, frame: fps * 7 },     // Stay on button
-    { x: 400, y: 350, frame: fps * 9 },     // Move up after claim
+    { x: 700, y: 200, frame: 0 },             // Start in view
+    { x: 860, y: 336, frame: fps * 2 },       // Browse slots area (slot 2)
+    { x: 860, y: 416, frame: fps * 4 },       // Lower slots (slot 4)
+    { x: 860, y: 498, frame: fps * 6 },       // Claim button
+    { x: 860, y: 498, frame: fps * 7 },       // Stay on button
+    { x: 860, y: 300, frame: fps * 9 },       // Move up after claim
   ];
 
   const clickFrames = [
-    { x: 400, y: 530, frame: Math.round(fps * 7) },
+    { x: 860, y: 498, frame: Math.round(fps * 7) },
   ];
 
   return (
@@ -216,7 +211,7 @@ export const BrowserClaimScene = () => {
         opacity: cardOpacity,
       }}
     >
-      <BrowserFrame url="solana-redpacket.vercel.app/claim/7xKd...m3Fv/1740000000">
+      <BrowserFrame url="redpackets.space/claim/7xKd...m3Fv/1740000000">
         <MockClaimPage frame={frame} fps={fps} />
         <Cursor points={cursorPoints} />
         <ClickEffects clicks={clickFrames} />

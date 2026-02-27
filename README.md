@@ -4,8 +4,8 @@ On-chain red packets for Solana — send SOL (or any SPL token) to friends and l
 
 ## Live Demo
 
-- **Frontend**: https://solana-redpacket.vercel.app
-- **Blinks Server**: http://46.62.206.161
+- **Frontend**: https://redpackets.space
+- **Blinks Server**: http://blinks.redpackets.space
 - **Program (Devnet)**: `CeAkHjhJzgrwbg8QWQ8tx6h5UxMZVKuGBeEDYczbc6Gz`
 
 ## How It Works
@@ -72,7 +72,7 @@ Rust **Axum** server implementing the **Solana Actions** spec. Returns unsigned 
 
 ## Roadmap
 
-- Domain + HTTPS for blinks (required for Twitter/Dialect rendering)
+- HTTPS for blinks server (required for Twitter/Dialect rendering)
 - Mainnet deployment
 - SPL token support in blinks (currently SOL only)
 - Red packet themes and custom messages

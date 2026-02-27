@@ -131,27 +131,33 @@ function ClaimPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Amounts per slot */}
-          <div className="space-y-1">
-            {redPacket.amounts.map((amt, i) => (
-              <div
-                key={i}
-                className="flex items-center justify-between text-sm"
-              >
-                <span>
-                  Slot {i + 1}
-                  {i < redPacket.claimers.length && (
-                    <span className="ml-2 text-muted-foreground">
-                      {redPacket.claimers[i]?.slice(0, 6)}...
+          {/* Claimed list */}
+          {redPacket.numClaimed > 0 && (
+            <div className="space-y-1">
+              {redPacket.claimers
+                .filter((_, i) => i < redPacket.numClaimed)
+                .map((claimer, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between text-sm rounded px-3 py-1.5 bg-muted/50"
+                  >
+                    <span className="text-muted-foreground">
+                      {claimer.slice(0, 4)}...{claimer.slice(-4)}
                     </span>
-                  )}
-                </span>
-                <span>
-                  {formatAmount(amt, redPacket.tokenType, decimals)}
-                </span>
-              </div>
-            ))}
-          </div>
+                    <span>
+                      {formatAmount(redPacket.amounts[i], redPacket.tokenType, decimals)}
+                    </span>
+                  </div>
+                ))}
+            </div>
+          )}
+
+          {/* Unclaimed remaining */}
+          {redPacket.numClaimed < redPacket.numRecipients && (
+            <p className="text-xs text-muted-foreground">
+              {redPacket.numRecipients - redPacket.numClaimed} remaining to claim
+            </p>
+          )}
 
           {/* Expiry */}
           <p className="text-xs text-muted-foreground">
@@ -262,6 +268,7 @@ function ClaimButton({
   }
 
   const decimals = redPacket.tokenType === TOKEN_TYPE_SOL ? 9 : 6;
+  const isRandom = redPacket.splitMode === 1;
   const claimAmount = redPacket.amounts[redPacket.numClaimed];
 
   return (
@@ -272,7 +279,9 @@ function ClaimButton({
     >
       {isClaiming
         ? "Claiming..."
-        : `Claim ${claimAmount ? formatAmount(claimAmount, redPacket.tokenType, decimals) : ""}`}
+        : isRandom
+          ? "Claim Your Share"
+          : `Claim ${claimAmount ? formatAmount(claimAmount, redPacket.tokenType, decimals) : ""}`}
     </Button>
   );
 }

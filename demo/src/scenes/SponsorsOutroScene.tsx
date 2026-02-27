@@ -5,29 +5,29 @@ export const SponsorsOutroScene = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  // Sponsors: 0 - 2.5s
+  // Sponsors: 0 - 3.5s
   const sponsorsOpacity = interpolate(frame, [0, fps * 0.3], [0, 1], {
     extrapolateRight: "clamp",
   });
-  const sponsorsFade = interpolate(frame, [fps * 2.2, fps * 2.5], [1, 0], {
+  const sponsorsFade = interpolate(frame, [fps * 3.2, fps * 3.5], [1, 0], {
     extrapolateRight: "clamp",
     extrapolateLeft: "clamp",
   });
 
-  // Outro: 2.5s - 5s
-  const outroOpacity = interpolate(frame, [fps * 2.5, fps * 3], [0, 1], {
+  // Outro: 3.5s - 7s
+  const outroOpacity = interpolate(frame, [fps * 3.5, fps * 4], [0, 1], {
     extrapolateRight: "clamp",
     extrapolateLeft: "clamp",
   });
   const outroScale = spring({
-    frame: Math.max(0, frame - fps * 2.5),
+    frame: Math.max(0, frame - fps * 3.5),
     fps,
     config: { damping: 12 },
   });
 
   const links = [
-    { label: "Live Demo", value: "solana-redpacket.vercel.app" },
-    { label: "Blinks", value: "46.62.206.161" },
+    { label: "Live Demo", value: "redpackets.space" },
+    { label: "Blinks", value: "blinks.redpackets.space" },
     { label: "Program", value: "CeAkHjh...bc6Gz" },
   ];
 

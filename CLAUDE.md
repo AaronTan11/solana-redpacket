@@ -101,16 +101,16 @@ cd app && npx tsc --noEmit  # type-check
 - `app/src/lib/transaction.ts` — `sendTransaction(signer, instructions[])` using kit's pipe pattern
 - `app/src/lib/ata.ts` — Associated Token Address derivation
 - `app/src/components/providers.tsx` — `SelectedWalletAccountContextProvider` + RPC provider with localStorage wallet persistence
-- `app/src/components/connect-wallet.tsx` — Wallet connect dropdown (shadcn DropdownMenu)
+- `app/src/components/connect-wallet.tsx` — Wallet connect dropdown using `useConnect` from `@wallet-standard/react` + `StandardConnect` feature detection
 
 **Routes** (`app/src/routes/`):
 - `__root.tsx` — Root layout: navbar (Create, Dashboard, Admin gated to admin wallet) + wallet button + Toaster
 - `index.tsx` — Create red packet form (SOL/SPL toggle, amount, recipients, split mode, expiry). Success card shows both website claim URL and blink claim URL (`BLINKS_BASE_URL` from `VITE_BLINKS_URL` env var)
-- `claim.$creator.$id.tsx` — Claim page (fetches on-chain state, shows slots, claim button)
+- `claim.$creator.$id.tsx` — Claim page (fetches on-chain state, shows claimed wallets + amounts, hides unclaimed amounts for random split)
 - `dashboard.tsx` — My Red Packets via `getProgramAccounts` + memcmp filter on creator
 - `admin.tsx` — Admin fee withdrawal (gated by ADMIN pubkey)
 
-**Wallet pattern**: `useSelectedWalletAccount()` returns `[account, setAccount, wallets]`. Signer obtained via `useWalletAccountTransactionSendingSigner(account, 'solana:devnet')` at component level, used in async handlers. Transaction flow: `pipe(createTransactionMessage → setFeePayerSigner → setBlockhashLifetime → appendInstruction) → signAndSendTransactionMessageWithSigners`.
+**Wallet pattern**: `useSelectedWalletAccount()` returns `[account, setAccount, wallets]`. Connection uses `useConnect(wallet)` from `@wallet-standard/react` which triggers `standard:connect` to prompt the wallet extension, then selects the first returned account. Wallets filtered by `StandardConnect` feature support. Provider uses stable `filterWallets` reference to avoid re-renders. Signer obtained via `useWalletAccountTransactionSendingSigner(account, 'solana:devnet')` at component level, used in async handlers. Transaction flow: `pipe(createTransactionMessage → setFeePayerSigner → setBlockhashLifetime → appendInstruction) → signAndSendTransactionMessageWithSigners`. Reference implementation: `/Users/aarontan/Developer/kit/examples/react-app/src/components/`.
 
 ### Blinks Server: `blinks/`
 
@@ -156,7 +156,7 @@ solana program deploy target/deploy/solana_redpacket.so \
   --max-len 114400
 ```
 
-**Frontend**: Deployed on Vercel at **https://solana-redpacket.vercel.app**. SSR via TanStack Start + Nitro.
+**Frontend**: Deployed on Vercel at **https://redpackets.space** (also accessible via `solana-redpacket.vercel.app`). SSR via TanStack Start + Nitro.
 
 ```bash
 cd app && vercel --prod   # deploy to production
@@ -165,9 +165,9 @@ cd app && vercel --prod   # deploy to production
 Env vars (set in Vercel dashboard, not in code):
 - `VITE_RPC_URL` — Helius devnet RPC (has API key, never commit)
 - `VITE_WS_URL` — WebSocket RPC (optional, falls back to public devnet)
-- `VITE_BLINKS_URL` — Blinks server base URL (optional, falls back to `http://46.62.206.161`)
+- `VITE_BLINKS_URL` — Blinks server base URL (optional, falls back to `http://blinks.redpackets.space`)
 
-**Blinks server**: Deployed on Hetzner VPS at **http://46.62.206.161** (Ubuntu 24.04 aarch64). Runs as systemd service `redpacket-blinks`.
+**Blinks server**: Deployed on Hetzner VPS at **http://blinks.redpackets.space** (`46.62.206.161`, Ubuntu 24.04 aarch64). Runs as systemd service `redpacket-blinks`.
 
 ```bash
 # On VPS (ssh root@46.62.206.161)
@@ -180,7 +180,7 @@ rsync -avz --exclude target --exclude .env blinks/ root@46.62.206.161:/opt/blink
 ssh root@46.62.206.161 'source ~/.cargo/env && cd /opt/blinks/src && cargo build --release && cp target/release/redpacket-blinks /usr/local/bin/ && systemctl restart redpacket-blinks'
 ```
 
-Env vars at `/opt/blinks/.env`: `RPC_URL` (Helius devnet), `HOST=0.0.0.0`, `PORT=80`, `BASE_URL=http://46.62.206.161`. Port 3001 is blocked by Hetzner's network firewall — server runs on port 80 directly. No domain/HTTPS yet — add Caddy reverse proxy when domain is available.
+Env vars at `/opt/blinks/.env`: `RPC_URL` (Helius devnet), `HOST=0.0.0.0`, `PORT=80`, `BASE_URL=http://blinks.redpackets.space`. Port 3001 is blocked by Hetzner's network firewall — server runs on port 80 directly. Domain: `blinks.redpackets.space` → A record to `46.62.206.161`.
 
 **Devnet setup** (one-time after deploy):
 1. Initialize SOL treasury: `cd blinks/scripts && npx tsx init-treasury.ts`

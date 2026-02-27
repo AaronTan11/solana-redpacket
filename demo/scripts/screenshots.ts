@@ -2,7 +2,7 @@ import { chromium } from "playwright";
 import path from "path";
 
 const PUBLIC_DIR = path.join(__dirname, "..", "public");
-const BASE_URL = "https://solana-redpacket.vercel.app";
+const BASE_URL = "https://redpackets.space";
 
 async function main() {
   const browser = await chromium.launch();

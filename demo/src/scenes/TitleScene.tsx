@@ -73,7 +73,7 @@ export const TitleScene = () => {
           marginTop: 16,
         }}
       >
-        On-chain red packets for Solana
+        Hongbao on Solana — for Chinese New Year and beyond
       </p>
     </div>
   );

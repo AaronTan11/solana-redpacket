@@ -4,6 +4,7 @@ import { type ReactNode, useMemo } from "react";
 import { RpcContext, rpc, rpcSubscriptions } from "@/lib/rpc";
 
 const STORAGE_KEY = "solana-redpacket:selected-wallet";
+const ALLOW_ALL_WALLETS = (_: UiWallet) => true;
 
 const isBrowser = typeof window !== "undefined";
 
@@ -19,7 +20,7 @@ export function Providers({ children }: { children: ReactNode }) {
 
   return (
     <SelectedWalletAccountContextProvider
-      filterWallets={(_: UiWallet) => true}
+      filterWallets={ALLOW_ALL_WALLETS}
       stateSync={stateSync}
     >
       <RpcContext.Provider value={rpcValue}>{children}</RpcContext.Provider>

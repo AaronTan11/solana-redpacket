@@ -17,42 +17,40 @@ import { SponsorsOutroScene } from "./scenes/SponsorsOutroScene";
 const TRANSITION = 15;
 
 const scenes = [
-  { component: TitleScene, duration: 75 },            // 2.5s
-  { component: ProblemSolutionScene, duration: 120 },  // 4s
+  { component: TitleScene, duration: 150 },            // 5s
+  { component: ProblemSolutionScene, duration: 300 },  // 10s
   { component: BrowserCreateScene, duration: 360 },    // 12s
   { component: BrowserClaimScene, duration: 360 },     // 12s
-  { component: BlinksScene, duration: 180 },           // 6s
+  { component: BlinksScene, duration: 210 },           // 7s
   { component: ArchTechScene, duration: 240 },         // 8s
-  { component: SponsorsOutroScene, duration: 150 },    // 5s
+  { component: SponsorsOutroScene, duration: 210 },    // 7s
 ];
 
-// Audio integration — uncomment when audio files are in demo/public/
-// import { Audio } from "@remotion/media";
+import { Audio } from "remotion";
 
+// Voiceover start times account for 15-frame transition overlaps:
+// Scene 1: 0, Scene 2: 135, Scene 3: 420, Scene 4: 765,
+// Scene 5: 1110, Scene 6: 1305, Scene 7: 1530
 const voiceovers = [
   { file: "vo-1.mp3", start: 0 },
-  { file: "vo-2.mp3", start: 75 },
-  { file: "vo-3.mp3", start: 195 },
-  { file: "vo-4.mp3", start: 555 },
-  { file: "vo-5.mp3", start: 915 },
-  { file: "vo-6.mp3", start: 1095 },
-  { file: "vo-7.mp3", start: 1335 },
+  { file: "vo-2.mp3", start: 135 },
+  { file: "vo-3.mp3", start: 420 },
+  { file: "vo-4.mp3", start: 765 },
+  { file: "vo-5.mp3", start: 1110 },
+  { file: "vo-6.mp3", start: 1305 },
+  { file: "vo-7.mp3", start: 1530 },
 ];
 
 export const DemoVideo = () => {
   return (
     <>
-      {/* Background music — uncomment when bgm.mp3 is in demo/public/
       <Audio src={staticFile("bgm.mp3")} loop volume={0.12} />
-      */}
 
-      {/* Voiceovers — uncomment when vo-*.mp3 files are in demo/public/
       {voiceovers.map((vo) => (
         <Sequence key={vo.file} from={vo.start} layout="none">
           <Audio src={staticFile(vo.file)} volume={0.85} />
         </Sequence>
       ))}
-      */}
 
       <TransitionSeries>
         {scenes.map((scene, i) => {
