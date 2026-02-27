@@ -166,6 +166,21 @@ Env vars (set in Vercel dashboard, not in code):
 - `VITE_RPC_URL` — Helius devnet RPC (has API key, never commit)
 - `VITE_WS_URL` — WebSocket RPC (optional, falls back to public devnet)
 
+**Blinks server**: Deployed on Hetzner VPS at **http://46.62.206.161** (Ubuntu 24.04 aarch64). Runs as systemd service `redpacket-blinks`.
+
+```bash
+# On VPS (ssh root@46.62.206.161)
+systemctl status redpacket-blinks   # check status
+journalctl -u redpacket-blinks -f   # tail logs
+systemctl restart redpacket-blinks  # restart
+
+# Redeploy: build locally won't work (macOS → aarch64 Linux). Build on VPS:
+rsync -avz --exclude target --exclude .env blinks/ root@46.62.206.161:/opt/blinks/src/
+ssh root@46.62.206.161 'source ~/.cargo/env && cd /opt/blinks/src && cargo build --release && cp target/release/redpacket-blinks /usr/local/bin/ && systemctl restart redpacket-blinks'
+```
+
+Env vars at `/opt/blinks/.env`: `RPC_URL` (Helius devnet), `HOST=0.0.0.0`, `PORT=80`, `BASE_URL=http://46.62.206.161`. Port 3001 is blocked by Hetzner's network firewall — server runs on port 80 directly. No domain/HTTPS yet — add Caddy reverse proxy when domain is available.
+
 **Devnet setup** (one-time after deploy):
 1. Initialize SOL treasury: `cd blinks/scripts && npx tsx init-treasury.ts`
 2. SOL Treasury PDA: `9ksFA6SR9vmhWpJmKYkLhGsUkSN89Dxz5x68Am9wA3kB`
