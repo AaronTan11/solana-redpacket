@@ -25,7 +25,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const PROGRAM_ID = new PublicKey(
-  "EXBnnaHEVPy7QR9eaFFtPvQ5QLDhzzb8sVaXtDVbbPbg"
+  "CeAkHjhJzgrwbg8QWQ8tx6h5UxMZVKuGBeEDYczbc6Gz"
 );
 
 // Test admin keypair — pubkey matches ADMIN constant in constants.rs

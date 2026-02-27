@@ -1,7 +1,7 @@
 use pinocchio::Address;
 
 pub const ID: Address = Address::new_from_array(five8_const::decode_32_const(
-    "EXBnnaHEVPy7QR9eaFFtPvQ5QLDhzzb8sVaXtDVbbPbg",
+    "CeAkHjhJzgrwbg8QWQ8tx6h5UxMZVKuGBeEDYczbc6Gz",
 ));
 
 /// Seeds

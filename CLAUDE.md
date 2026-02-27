@@ -84,9 +84,91 @@ Red packet (hongbao) system supporting **native SOL** and **multiple SPL tokens*
 
 Uses **LiteSVM** (in-memory SVM, no validator needed). The `setupSVM()` helper creates mock USDC + MYRC mints and initializes 3 treasuries (USDC, MYRC, SOL), returning a ready-to-use test environment. All instruction data is built manually matching the on-chain byte layout. Data builders accept `tokenType` parameter (default `0` for SPL). 63 tests covering all 22/22 error variants. Breakdown: 19 USDC + 4 MYRC + 8 SOL core, 7 fee withdrawal, 5 input validation, 2 edge cases, 1 SOL lifecycle, 1 SOL treasury init, 8 security guards, 8 remaining validation paths (NotEnoughAccounts, InvalidTokenAccount, zero-slot random split, invalid token_type value, SOL expired claim, SOL excess withdrawal, close fake token program, truncated data).
 
+### Frontend: `app/`
+
+TanStack Start + shadcn/ui (Lyra style, red theme) + `@solana/kit` + `@solana/react` + `wallet-standard`. No database — all state on-chain. Shareable claim URLs: `/claim/<creator_pubkey>/<id>`.
+
+```bash
+cd app && yarn dev     # dev server on localhost:3000
+cd app && npx tsc --noEmit  # type-check
+```
+
+**Stack**: TanStack Start (file-based routing, SSR-capable), Tailwind v4, shadcn/ui (Radix), `@solana/kit` v6 (RPC, codecs, transaction building), `@solana/react` (wallet hooks), `@wallet-standard/react` (wallet discovery). Uses `node-modules` linker (`.yarnrc.yml`).
+
+**Key files**:
+- `app/src/lib/program.ts` — Client SDK: PDA derivation (`findRedPacketPDA`, `findVaultPDA`, `findTreasuryPDA`, `findTreasuryVaultPDA`), instruction builders (`buildCreateInstruction`, `buildClaimInstruction`, `buildCloseInstruction`, `buildInitTreasuryInstruction`, `buildWithdrawFeesInstruction`), account decoders (`decodeRedPacket`, `decodeTreasury`), helpers (`computeFee`, `generateRandomSplit`, `formatAmount`, `getRedPacketStatus`)
+- `app/src/lib/rpc.ts` — RPC context (`VITE_RPC_URL` env var, devnet fallback)
+- `app/src/lib/transaction.ts` — `sendTransaction(signer, instructions[])` using kit's pipe pattern
+- `app/src/lib/ata.ts` — Associated Token Address derivation
+- `app/src/components/providers.tsx` — `SelectedWalletAccountContextProvider` + RPC provider with localStorage wallet persistence
+- `app/src/components/connect-wallet.tsx` — Wallet connect dropdown (shadcn DropdownMenu)
+
+**Routes** (`app/src/routes/`):
+- `__root.tsx` — Root layout: navbar (Create, Dashboard, Admin gated to admin wallet) + wallet button + Toaster
+- `index.tsx` — Create red packet form (SOL/SPL toggle, amount, recipients, split mode, expiry)
+- `claim.$creator.$id.tsx` — Claim page (fetches on-chain state, shows slots, claim button)
+- `dashboard.tsx` — My Red Packets via `getProgramAccounts` + memcmp filter on creator
+- `admin.tsx` — Admin fee withdrawal (gated by ADMIN pubkey)
+
+**Wallet pattern**: `useSelectedWalletAccount()` returns `[account, setAccount, wallets]`. Signer obtained via `useWalletAccountTransactionSendingSigner(account, 'solana:devnet')` at component level, used in async handlers. Transaction flow: `pipe(createTransactionMessage → setFeePayerSigner → setBlockhashLifetime → appendInstruction) → signAndSendTransactionMessageWithSigners`.
+
+### Blinks Server: `blinks/`
+
+Rust Axum server implementing the [Solana Actions spec](https://solana.com/docs/advanced/actions). Returns unsigned transactions that any Actions-compatible client can sign and submit. **SOL only** for the blinks MVP. Based on `orbitflare/templates/solana-blinks-axum` patterns. E2E tested on devnet (82/82 assertions, 11 test scenarios).
+
+```bash
+cd blinks && cargo run --release    # starts on 0.0.0.0:3001
+cd blinks/scripts && npx tsx e2e-test.ts  # e2e test (needs server running + program deployed)
+```
+
+**Actions** (3 endpoints, all under `/api/actions/`):
+
+| Action | GET | POST |
+|--------|-----|------|
+| `create` | Form: amount, recipients, split mode, expiry | Builds SOL create tx, returns shareable claim URL |
+| `claim?creator=X&id=Y` | Fetches on-chain state, shows slots/remaining/status | Builds claim tx with correct slot_index |
+| `close?creator=X&id=Y` | Shows status, disabled if still active | Builds close tx (creator only) |
+
+The claim URL (`{BASE_URL}/api/actions/claim?creator=X&id=Y`) is the shareable blink.
+
+**Key files**:
+- `blinks/src/program.rs` — Rust PDA derivation, instruction data builders, account deserialization (mirrors `app/src/lib/program.ts`)
+- `blinks/src/actions/create.rs`, `claim.rs`, `close.rs` — Action implementations
+- `blinks/src/router.rs` — Axum routes + Action trait with `metadata()` and `execute()` (both receive query params)
+- `blinks/src/consts.rs` — Program ID, seeds, constants
+- `blinks/scripts/init-treasury.ts` — One-off SOL treasury init on devnet
+- `blinks/scripts/e2e-test.ts` — Comprehensive e2e test (82 assertions): even split, random split, single/max recipients, expiry, double claim rejection, non-creator close, active close, fee accumulation, metadata, nonexistent packet
+
+**Config** (env vars or `.env`): `RPC_URL`, `HOST`, `PORT`, `BASE_URL`. Uses `CommitmentConfig::confirmed()` for RPC (important for devnet consistency).
+
+**Workspace**: `blinks/` is **excluded** from the root Cargo workspace (different dependency tree from the Pinocchio program). Has its own `Cargo.toml` with axum, tokio, solana-sdk, solana-client.
+
 ### Deploy
 
-Binary: **57,200 bytes**. Permanent rent: **~0.40 SOL**. Peak during deploy: **~0.80 SOL** (buffer reclaimed after). Use `--max-len 114400` for 2x upgrade headroom (~0.80 SOL permanent).
+**Program**: `CeAkHjhJzgrwbg8QWQ8tx6h5UxMZVKuGBeEDYczbc6Gz` (keypair at `target/deploy/solana_redpacket-keypair.json`). Deployed to **devnet**. Upgrade authority: `4MvyqHPLuGnHTcRBnyzboEkyJePr2VQv7AeDxKSQyvXm`.
+
+Binary: **57,200 bytes**. Permanent rent: **~0.80 SOL** (with `--max-len 114400` for 2x upgrade headroom).
+
+```bash
+cargo build-sbf
+solana program deploy target/deploy/solana_redpacket.so \
+  --program-id target/deploy/solana_redpacket-keypair.json \
+  --max-len 114400
+```
+
+**Frontend**: Deployed on Vercel at **https://solana-redpacket.vercel.app**. SSR via TanStack Start + Nitro.
+
+```bash
+cd app && vercel --prod   # deploy to production
+```
+
+Env vars (set in Vercel dashboard, not in code):
+- `VITE_RPC_URL` — Helius devnet RPC (has API key, never commit)
+- `VITE_WS_URL` — WebSocket RPC (optional, falls back to public devnet)
+
+**Devnet setup** (one-time after deploy):
+1. Initialize SOL treasury: `cd blinks/scripts && npx tsx init-treasury.ts`
+2. SOL Treasury PDA: `9ksFA6SR9vmhWpJmKYkLhGsUkSN89Dxz5x68Am9wA3kB`
 
 ### Dependencies
 
