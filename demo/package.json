@@ -1,0 +1,24 @@
+{
+  "name": "redpacket-demo",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "render": "remotion render src/index.ts DemoVideo out/demo-video.mp4",
+    "build": "remotion render src/index.ts DemoVideo out/demo-video.mp4"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.429",
+    "@remotion/google-fonts": "4.0.429",
+    "@remotion/media": "4.0.429",
+    "@remotion/transitions": "4.0.429",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "remotion": "4.0.429"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "playwright": "^1.58.2",
+    "typescript": "^5.5.0"
+  }
+}

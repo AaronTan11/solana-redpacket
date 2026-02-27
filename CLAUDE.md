@@ -186,6 +186,39 @@ Env vars at `/opt/blinks/.env`: `RPC_URL` (Helius devnet), `HOST=0.0.0.0`, `PORT
 1. Initialize SOL treasury: `cd blinks/scripts && npx tsx init-treasury.ts`
 2. SOL Treasury PDA: `9ksFA6SR9vmhWpJmKYkLhGsUkSN89Dxz5x68Am9wA3kB`
 
+### Demo Video: `demo/`
+
+Programmatic demo video built with **Remotion** (React-based video creation). 7 scenes at 1920x1080, 30fps, ~47s total. Features browser frame walkthrough with animated cursor, click effects, and zoom.
+
+```bash
+cd demo && npm install            # install deps
+cd demo && npx remotion studio    # preview in browser
+cd demo && npx remotion render src/index.ts DemoVideo out/demo-video.mp4  # render
+```
+
+**Scenes** (in `demo/src/scenes/`):
+1. `TitleScene` — Logo + tagline (2.5s)
+2. `ProblemSolutionScene` — Problem → solution text (4s)
+3. `BrowserCreateScene` — Browser frame, cursor fills create form, clicks create, success card (12s)
+4. `BrowserClaimScene` — Browser frame, claim page, cursor claims slot (12s)
+5. `BlinksScene` — Blink card preview + shareable URL (6s)
+6. `ArchTechScene` — Architecture diagram → tech stack grid (8s)
+7. `SponsorsOutroScene` — Sponsors (SF + Orbitflare) → outro links (5s)
+
+**Reusable components** (`demo/src/components/`):
+- `BrowserFrame` — Mock Chrome window with traffic lights + address bar
+- `Cursor` — Spring-physics animated cursor following keypoints
+- `ClickEffect` — Expanding ripple at click positions
+- `ZoomContainer` — Smooth zoom in/hold/zoom out wrapper
+
+**Audio** (wired but commented out in `DemoVideo.tsx` until files provided):
+- Background music: `demo/public/bgm.mp3` (user provides, royalty-free from Pixabay)
+- Voiceover: `demo/public/vo-1.mp3` through `vo-7.mp3` (user generates via ElevenLabs TTS)
+
+**Screenshots**: `demo/public/ss-*.png` captured via Playwright (`demo/scripts/screenshots.ts`) from the live site.
+
+**Stack**: remotion 4.0.429, @remotion/transitions (fade/slide), @remotion/google-fonts, @remotion/media (audio), playwright (screenshots).
+
 ### Dependencies
 
 - `pinocchio` 0.10 (core framework + CPI)
